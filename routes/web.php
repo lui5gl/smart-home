@@ -35,7 +35,7 @@ Route::get('dashboard', function (Request $request) {
             ]),
         ]);
 
-    $devicesQuery = $user->devices()->with(['location', 'area'])->latest();
+    $devicesQuery = $user->devices()->visible()->with(['location', 'area'])->latest();
     $filters = [
         'location' => null,
         'area' => null,
@@ -87,6 +87,10 @@ Route::post('devices', [DeviceController::class, 'store'])
 Route::patch('devices/{device}', [DeviceController::class, 'update'])
     ->middleware(['auth', 'verified'])
     ->name('devices.update');
+
+Route::delete('devices/{device}', [DeviceController::class, 'destroy'])
+    ->middleware(['auth', 'verified'])
+    ->name('devices.destroy');
 
 Route::post('areas', [AreaController::class, 'store'])
     ->middleware(['auth', 'verified'])

@@ -29,6 +29,7 @@ class DeviceFactory extends Factory
             'brightness' => $type === 'dimmer'
                 ? fake()->numberBetween(0, 100)
                 : 100,
+            'hidden' => false,
         ];
     }
 }

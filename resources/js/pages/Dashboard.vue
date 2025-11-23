@@ -278,6 +278,43 @@ const handleBrightnessChange = (device: DeviceItem, value: string | number): voi
     });
 };
 
+const hideConfirmationKeyword = 'confirmo';
+const isHideDialogOpen = ref(false);
+const hideConfirmationInput = ref('');
+const deviceToHide = ref<DeviceItem | null>(null);
+const isHideConfirmationValid = computed(
+    () => hideConfirmationInput.value.trim().toLowerCase() === hideConfirmationKeyword
+);
+
+const prepareHideDevice = (device: DeviceItem): void => {
+    deviceToHide.value = device;
+    hideConfirmationInput.value = '';
+    isHideDialogOpen.value = true;
+};
+
+const closeHideDialog = (): void => {
+    isHideDialogOpen.value = false;
+    deviceToHide.value = null;
+    hideConfirmationInput.value = '';
+};
+
+const confirmHideDevice = (): void => {
+    if (!deviceToHide.value || !isHideConfirmationValid.value) {
+        return;
+    }
+
+    router.delete(
+        DeviceController.destroy.url({ device: deviceToHide.value.id }),
+        {},
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onFinish: closeHideDialog,
+        }
+    );
+};
+
+
 const dialogTitle = computed(() =>
     isEditingDevice.value ? 'Editar dispositivo' : 'Agregar dispositivo'
 );
@@ -627,6 +664,15 @@ const handleAreaFilterChange = (value: number | null): void => {
                                 </Badge>
                                 <Button
                                     type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    class="shrink-0"
+                                    @click="prepareHideDevice(device)"
+                                >
+                                    Eliminar
+                                </Button>
+                                <Button
+                                    type="button"
                                     size="sm"
                                     variant="outline"
                                     class="shrink-0"
@@ -711,5 +757,32 @@ const handleAreaFilterChange = (value: number | null): void => {
                 </div>
             </div>
         </div>
+        <Dialog :open="isHideDialogOpen" @update:open="isHideDialogOpen = $event">
+            <DialogContent class="sm:max-w-xs">
+                <DialogHeader class="space-y-2">
+                    <DialogTitle>Confirmar eliminación</DialogTitle>
+                    <DialogDescription>
+                        Escribe <strong>&ldquo;confirmo&rdquo;</strong> para marcar este dispositivo como eliminado.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="grid gap-2">
+                    <Label for="hide-device-confirmation">Confirmación</Label>
+                    <Input
+                        id="hide-device-confirmation"
+                        v-model="hideConfirmationInput"
+                        placeholder="confirmo"
+                        autocomplete="off"
+                    />
+                </div>
+                <DialogFooter class="gap-2 w-full flex justify-between">
+                    <DialogClose as-child>
+                        <Button type="button" variant="secondary" @click="closeHideDialog">Cancelar</Button>
+                    </DialogClose>
+                    <Button type="button" :disabled="!isHideConfirmationValid" @click="confirmHideDevice">
+                        Eliminar dispositivo
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>

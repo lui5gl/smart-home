@@ -5,6 +5,40 @@ use App\Models\Device;
 use App\Models\Location;
 use App\Models\User;
 
+test('authenticated users can hide their own devices', function () {
+    $user = User::factory()->create();
+    $device = Device::factory()->for($user)->create();
+
+    $this->actingAs($user);
+
+    $response = $this->delete(route('devices.destroy', $device));
+
+    $response->assertRedirect(route('dashboard'));
+    $response->assertSessionHas('success', 'Dispositivo eliminado correctamente.');
+
+    $this->assertDatabaseHas('devices', [
+        'id' => $device->id,
+        'hidden' => true,
+    ]);
+});
+
+test('users cannot hide devices they do not own', function () {
+    $owner = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $device = Device::factory()->for($owner)->create();
+
+    $this->actingAs($otherUser);
+
+    $response = $this->delete(route('devices.destroy', $device));
+
+    $response->assertForbidden();
+
+    $this->assertDatabaseHas('devices', [
+        'id' => $device->id,
+        'hidden' => false,
+    ]);
+});
+
 test('authenticated users can create devices', function () {
     $user = User::factory()->create();
     $location = Location::factory()->for($user)->create(['name' => 'Casa principal']);

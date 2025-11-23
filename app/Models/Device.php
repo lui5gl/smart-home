@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\Area;
-use App\Models\Location;
-use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,7 +24,18 @@ class Device extends Model
         'status',
         'brightness',
         'area_id',
+        'hidden',
     ];
+
+    /** @var array<string, string> */
+    protected $casts = [
+        'hidden' => 'boolean',
+    ];
+
+    public function scopeVisible(Builder $query): Builder
+    {
+        return $query->where('hidden', false);
+    }
 
     public function user(): BelongsTo
     {
