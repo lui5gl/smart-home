@@ -218,6 +218,7 @@ const handleStatusToggle = (device: DeviceItem): void => {
     router.patch(DeviceController.update.url({ device: device.id }), {
         name: device.name,
         location: device.location ?? '',
+        area_id: device.area_id,
         type: device.type,
         status: nextStatus,
         brightness: currentDeviceBrightness(device),
@@ -267,6 +268,7 @@ const handleBrightnessChange = (device: DeviceItem, value: string | number): voi
     router.patch(DeviceController.update.url({ device: device.id }), {
         name: device.name,
         location: device.location ?? '',
+        area_id: device.area_id,
         type: device.type,
         status: device.status,
         brightness: parsed,
