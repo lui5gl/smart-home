@@ -612,9 +612,9 @@ const handleAreaFilterChange = (value: number | null): void => {
                 </div>
             </div>
 
-            <div
-                v-if="hasDevices"
-                    class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                <div
+                    v-if="hasDevices"
+                    class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
                 >
                     <Card v-for="device in devices" :key="device.id" class="border-border/70">
                         <CardHeader class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
