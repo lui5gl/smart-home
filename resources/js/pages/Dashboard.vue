@@ -681,8 +681,6 @@ const handleAreaFilterChange = (value: number | null): void => {
                                             Editar
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
-                                            variant="destructive"
-                                            class="rounded-sm bg-destructive px-2 py-2 text-white shadow-sm hover:bg-destructive/90 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-1 focus-visible:ring-offset-background data-[highlighted]:bg-destructive data-[highlighted]:text-white dark:bg-destructive dark:text-white dark:hover:bg-destructive/85 dark:data-[highlighted]:bg-destructive"
                                             @click="prepareHideDevice(device)"
                                         >
                                             <IconTrash class="size-4" />
