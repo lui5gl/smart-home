@@ -503,20 +503,6 @@ const handleAreaFilterChange = (value: number | null): void => {
                                 class="space-y-6"
                                 v-slot="{ errors, processing }"
                             >
-                            <div
-                                v-if="isEditingDevice && editingDevice"
-                                class="space-y-1 rounded-lg border border-border/70 bg-muted/30 p-3 text-xs text-muted-foreground"
-                            >
-                                <p>
-                                    <span class="font-semibold text-foreground">Agregado el:</span>
-                                    {{ formatDate(editingDevice.created_at) }}
-                                </p>
-                                <p>
-                                    <span class="font-semibold text-foreground">Última modificación:</span>
-                                    {{ formatDate(editingDevice.updated_at, 'Sin cambios registrados') }}
-                                </p>
-                            </div>
-
                             <div class="grid gap-4">
                                 <div class="grid gap-2">
                                     <Label for="device-name">Nombre del dispositivo</Label>
