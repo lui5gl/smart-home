@@ -5,7 +5,6 @@ import InputError from '@/components/InputError.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -15,7 +14,6 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Form, Head, router } from '@inertiajs/vue3';
 import {
-    IconBulb,
     IconCopy,
     IconDotsVertical,
     IconMapPin,
@@ -114,10 +112,6 @@ const selectedDeviceAreaId = ref<number | ''>('');
 const isEditingDevice = computed(() => deviceDialogMode.value === 'edit');
 const showBrightnessControl = computed(() => deviceType.value === 'dimmer');
 
-const deviceTypeLabels: Record<DeviceType, string> = {
-    switch: 'Interruptor',
-    dimmer: 'Regulable',
-};
 const statusLabels: Record<DeviceStatus, string> = {
     on: 'Encendido',
     off: 'Apagado',
@@ -680,10 +674,6 @@ const handleAreaFilterChange = (value: number | null): void => {
                                 </CardDescription>
                             </div>
                             <div class="flex flex-wrap items-center gap-2">
-                                <Badge variant="secondary">
-                                    <IconBulb class="size-3.5" />
-                                    {{ deviceTypeLabels[device.type] }}
-                                </Badge>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger :as-child="true">
                                         <Button
