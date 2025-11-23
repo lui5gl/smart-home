@@ -415,7 +415,7 @@ const handleAreaFilterChange = (value: number | null): void => {
                 </div>
 
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-                    <div class="flex flex-col gap-1 text-sm text-muted-foreground">
+                    <div class="order-1 w-full sm:order-none sm:w-auto flex flex-col gap-1 text-sm text-muted-foreground">
                         <Label for="area-filter" class="font-medium text-foreground">Filtrar por área</Label>
                         <select
                             id="area-filter"
@@ -440,7 +440,7 @@ const handleAreaFilterChange = (value: number | null): void => {
                         </select>
                     </div>
 
-                    <div class="flex flex-wrap gap-2 sm:justify-end">
+                    <div class="order-2 w-full sm:order-none sm:w-auto flex flex-wrap gap-2 sm:justify-end">
                         <Dialog :open="isAreaDialogOpen" @update:open="isAreaDialogOpen = $event">
                         <DialogTrigger as-child>
                             <Button
