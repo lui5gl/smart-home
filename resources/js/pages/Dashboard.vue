@@ -168,6 +168,20 @@ const deviceFormDefinition = computed(() => {
                             class="space-y-6"
                             v-slot="{ errors, processing }"
                         >
+                            <div
+                                v-if="isEditingDevice && editingDevice"
+                                class="space-y-1 rounded-lg border border-border/70 bg-muted/30 p-3 text-xs text-muted-foreground"
+                            >
+                                <p>
+                                    <span class="font-semibold text-foreground">Agregado el:</span>
+                                    {{ formatDate(editingDevice.created_at) }}
+                                </p>
+                                <p>
+                                    <span class="font-semibold text-foreground">Última modificación:</span>
+                                    {{ formatDate(editingDevice.updated_at, 'Sin cambios registrados') }}
+                                </p>
+                            </div>
+
                             <div class="grid gap-4">
                                 <div class="grid gap-2">
                                     <Label for="device-name">Nombre del dispositivo</Label>
@@ -227,7 +241,6 @@ const deviceFormDefinition = computed(() => {
                     <CardHeader class="flex flex-row items-start justify-between gap-4">
                         <div>
                             <CardTitle class="text-lg font-semibold">{{ device.name }}</CardTitle>
-                            <CardDescription>Agregado el {{ formatAddedAt(device.created_at) }}</CardDescription>
                         </div>
                         <div class="flex items-center gap-2">
                             <Badge variant="secondary">

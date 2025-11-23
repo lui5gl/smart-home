@@ -34,7 +34,8 @@ test('authenticated users can view their devices on the dashboard', function () 
                     && $devices->every(fn (array $device) => array_key_exists('name', $device)
                         && array_key_exists('location', $device)
                         && array_key_exists('type', $device)
-                        && array_key_exists('created_at', $device));
+                        && array_key_exists('created_at', $device)
+                        && array_key_exists('updated_at', $device));
             })
         );
 });
