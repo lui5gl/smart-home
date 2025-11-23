@@ -12,6 +12,7 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    useSidebar,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -30,7 +31,7 @@ interface SidebarLocation {
     name: string;
 }
 
-type LocationFilter = number | 'none' | null;
+type LocationFilter = number | null;
 
 const page = usePage<{
     sidebarLocations?: SidebarLocation[];
@@ -41,6 +42,8 @@ const sidebarLocations = computed<SidebarLocation[]>(() => page.props.sidebarLoc
 const locationFilter = computed<LocationFilter>(() => page.props.sidebarFilters?.location ?? null);
 const isLocationDialogOpen = ref(false);
 const newLocationName = ref('');
+const { state } = useSidebar();
+const showLocationSection = computed(() => state.value === 'expanded');
 
 const isActiveLocation = (location: LocationFilter): boolean => {
     if (location === null) {
@@ -51,12 +54,7 @@ const isActiveLocation = (location: LocationFilter): boolean => {
 };
 
 const applyLocationFilter = (location: LocationFilter): void => {
-    const query =
-        location === null
-            ? {}
-            : {
-                  location: location === 'none' ? 'none' : location,
-              };
+    const query = location === null ? {} : { location };
 
     router.get(
         dashboard({ query }).url,
@@ -91,7 +89,10 @@ const handleLocationStored = (): void => {
         <SidebarContent>
             <NavMain :items="mainNavItems" />
 
-            <div class="mt-6 space-y-3 px-2">
+            <div
+                v-if="showLocationSection"
+                class="mt-6 space-y-3 px-2"
+            >
                 <div class="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground/80">
                     <span>Ubicaciones</span>
                     <Dialog :open="isLocationDialogOpen" @update:open="isLocationDialogOpen = $event">
@@ -150,26 +151,18 @@ const handleLocationStored = (): void => {
                 <div class="space-y-1">
                     <button
                         type="button"
-                        class="w-full rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted"
+                        class="w-full truncate whitespace-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted"
                         :class="isActiveLocation(null) ? 'bg-primary text-primary-foreground' : ''"
                         @click="applyLocationFilter(null)"
                     >
                         Todas las ubicaciones
-                    </button>
-                    <button
-                        type="button"
-                        class="w-full rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted"
-                        :class="isActiveLocation('none') ? 'bg-primary text-primary-foreground' : ''"
-                        @click="applyLocationFilter('none')"
-                    >
-                        Sin ubicación
                     </button>
                     <template v-if="sidebarLocations.length">
                         <button
                             v-for="location in sidebarLocations"
                             :key="location.id"
                             type="button"
-                            class="w-full rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted"
+                        class="w-full truncate whitespace-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted"
                             :class="isActiveLocation(location.id) ? 'bg-primary text-primary-foreground' : ''"
                             @click="applyLocationFilter(location.id)"
                         >

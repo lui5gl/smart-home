@@ -52,10 +52,8 @@ class HandleInertiaRequests extends Middleware
                     ->get(['id', 'name'])
                 : [],
             'sidebarFilters' => [
-                'location' => $request->routeIs('dashboard')
-                    ? ($request->query('location') === 'none'
-                        ? 'none'
-                        : (is_numeric($request->query('location')) ? (int) $request->query('location') : null))
+                'location' => $request->routeIs('dashboard') && is_numeric($request->query('location'))
+                    ? (int) $request->query('location')
                     : null,
                 'area' => $request->routeIs('dashboard') && is_numeric($request->query('area'))
                     ? (int) $request->query('area')

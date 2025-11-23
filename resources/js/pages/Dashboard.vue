@@ -51,7 +51,7 @@ interface LocationItem {
 }
 
 interface DashboardFilters {
-    location: number | 'none' | null;
+    location: number | null;
     area: number | null;
 }
 
@@ -304,13 +304,8 @@ const handleAreaStored = (): void => {
     isAreaDialogOpen.value = false;
 };
 
-const applyFilters = (locationValue: number | 'none' | null, areaValue: number | null): void => {
-    const query: Record<string, string | number> =
-        locationValue === null
-            ? {}
-            : {
-                  location: locationValue === 'none' ? 'none' : locationValue,
-              };
+const applyFilters = (locationValue: number | null, areaValue: number | null): void => {
+    const query: Record<string, string | number> = locationValue === null ? {} : { location: locationValue };
 
     if (areaValue !== null) {
         query.area = areaValue;

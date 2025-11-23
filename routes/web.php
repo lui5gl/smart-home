@@ -21,7 +21,6 @@ Route::get('dashboard', function (Request $request) {
     $areaFilter = $request->query('area');
     $locationId = is_numeric($locationFilter) ? (int) $locationFilter : null;
     $areaId = is_numeric($areaFilter) ? (int) $areaFilter : null;
-    $showUnassigned = $locationFilter === 'none';
 
     $locations = $user->locations()
         ->with(['areas' => fn ($query) => $query->orderBy('name')])
@@ -50,9 +49,6 @@ Route::get('dashboard', function (Request $request) {
             $filters['area'] = $area->id;
             $filters['location'] = $area->location_id;
         }
-    } elseif ($showUnassigned) {
-        $devicesQuery->whereNull('area_id')->whereNull('location_id');
-        $filters['location'] = 'none';
     } elseif ($locationId) {
         $userLocation = $user->locations()->whereKey($locationId)->first();
 
