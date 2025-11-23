@@ -71,6 +71,7 @@ Route::get('dashboard', function (Request $request) {
             'brightness' => $device->brightness,
             'created_at' => $device->created_at?->toIso8601String(),
             'updated_at' => $device->updated_at?->toIso8601String(),
+            'webhook_url' => route('devices.webhook', ['token' => $device->webhook_token]),
         ]);
 
     return Inertia::render('Dashboard', [
@@ -91,6 +92,9 @@ Route::patch('devices/{device}', [DeviceController::class, 'update'])
 Route::delete('devices/{device}', [DeviceController::class, 'destroy'])
     ->middleware(['auth', 'verified'])
     ->name('devices.destroy');
+
+Route::get('webhooks/devices/{token}', [DeviceController::class, 'webhook'])
+    ->name('devices.webhook');
 
 Route::post('areas', [AreaController::class, 'store'])
     ->middleware(['auth', 'verified'])

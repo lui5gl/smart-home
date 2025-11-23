@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Device>
@@ -30,6 +31,7 @@ class DeviceFactory extends Factory
                 ? fake()->numberBetween(0, 100)
                 : 100,
             'hidden' => false,
+            'webhook_token' => (string) Str::uuid(),
         ];
     }
 }

@@ -25,6 +25,7 @@ class Device extends Model
         'brightness',
         'area_id',
         'hidden',
+        'webhook_token',
     ];
 
     /** @var array<string, string> */

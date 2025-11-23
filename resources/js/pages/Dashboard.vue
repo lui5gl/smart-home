@@ -16,11 +16,13 @@ import { Spinner } from '@/components/ui/spinner';
 import { Form, Head, router } from '@inertiajs/vue3';
 import {
     IconBulb,
+    IconCopy,
     IconDotsVertical,
     IconMapPin,
     IconPencil,
     IconPlus,
     IconPower,
+    IconSettings,
     IconSun,
     IconTrash,
 } from '@tabler/icons-vue';
@@ -40,6 +42,7 @@ interface DeviceItem {
     brightness: number;
     created_at: string | null;
     updated_at: string | null;
+    webhook_url: string;
 }
 
 interface AreaItem {
@@ -297,6 +300,8 @@ const deviceToHide = ref<DeviceItem | null>(null);
 const isHideConfirmationValid = computed(
     () => hideConfirmationInput.value.trim().toLowerCase() === hideConfirmationKeyword
 );
+const isAdvancedDialogOpen = ref(false);
+const advancedDevice = ref<DeviceItem | null>(null);
 
 const prepareHideDevice = (device: DeviceItem): void => {
     deviceToHide.value = device;
@@ -325,6 +330,25 @@ const confirmHideDevice = (): void => {
         }
     );
 };
+
+const openAdvancedDialog = (device: DeviceItem): void => {
+    advancedDevice.value = device;
+    isAdvancedDialogOpen.value = true;
+};
+
+const copyWebhookUrl = async (): Promise<void> => {
+    if (!advancedDevice.value) {
+        return;
+    }
+
+    await navigator.clipboard.writeText(advancedDevice.value.webhook_url);
+};
+
+watch(isAdvancedDialogOpen, (isOpen) => {
+    if (!isOpen) {
+        advancedDevice.value = null;
+    }
+});
 
 
 const dialogTitle = computed(() =>
@@ -676,6 +700,10 @@ const handleAreaFilterChange = (value: number | null): void => {
                                             <IconPencil class="size-4" />
                                             Editar
                                         </DropdownMenuItem>
+                                        <DropdownMenuItem @click="openAdvancedDialog(device)">
+                                            <IconSettings class="size-4" />
+                                            Avanzado
+                                        </DropdownMenuItem>
                                         <DropdownMenuItem
                                             @click="prepareHideDevice(device)"
                                         >
@@ -766,6 +794,73 @@ const handleAreaFilterChange = (value: number | null): void => {
                 </div>
             </div>
         </div>
+        <Dialog :open="isAdvancedDialogOpen" @update:open="isAdvancedDialogOpen = $event">
+            <DialogContent class="sm:max-w-lg">
+                <DialogHeader class="space-y-2">
+                    <DialogTitle>Opciones avanzadas</DialogTitle>
+                    <DialogDescription>
+                        Comparte este enlace con tu dispositivo para leer su estado actual.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div v-if="advancedDevice" class="space-y-4">
+                    <div class="grid gap-2">
+                        <Label for="advanced-webhook-url">URL del webhook</Label>
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <Input
+                                id="advanced-webhook-url"
+                                :model-value="advancedDevice.webhook_url"
+                                readonly
+                                class="w-full"
+                            />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                class="w-full sm:w-auto"
+                                @click="copyWebhookUrl"
+                            >
+                                <IconCopy class="size-4" />
+                                Copiar
+                            </Button>
+                        </div>
+                        <p class="text-xs text-muted-foreground">
+                            Tus dispositivos pueden usar esta URL para consultar el estado y la potencia.
+                        </p>
+                    </div>
+
+                    <div class="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3 text-sm text-foreground">
+                        <div class="flex items-center justify-between">
+                            <span class="inline-flex items-center gap-1 text-muted-foreground">
+                                <IconPower class="size-4" />
+                                Estado
+                            </span>
+                            <span class="font-semibold text-foreground">
+                                {{ statusLabels[advancedDevice.status] }}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="inline-flex items-center gap-1 text-muted-foreground">
+                                <IconSun class="size-4" />
+                                Potencia
+                            </span>
+                            <span class="font-semibold text-foreground">
+                                {{
+                                    advancedDevice.type === 'dimmer'
+                                        ? `${advancedDevice.brightness}%`
+                                        : '100%'
+                                }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <DialogFooter class="justify-end gap-2">
+                    <DialogClose as-child>
+                        <Button type="button" variant="secondary">Cerrar</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
         <Dialog :open="isHideDialogOpen" @update:open="isHideDialogOpen = $event">
             <DialogContent class="sm:max-w-xs">
                 <DialogHeader class="space-y-2">
