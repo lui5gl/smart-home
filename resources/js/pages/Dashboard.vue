@@ -441,82 +441,11 @@ const handleAreaFilterChange = (value: number | null): void => {
                     </div>
 
                     <div class="order-2 w-full sm:order-none sm:w-auto flex flex-wrap gap-2 sm:justify-end">
-                        <Dialog :open="isAreaDialogOpen" @update:open="isAreaDialogOpen = $event">
-                        <DialogTrigger as-child>
-                            <Button
-                                size="lg"
-                                variant="outline"
-                                class="h-10 min-w-[200px] px-6 gap-2 sm:w-auto"
-                                @click="isAreaDialogOpen = true"
-                            >
-                                    <IconPlus class="size-4" />
-                                    Nueva área
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent class="sm:max-w-sm">
-                                <DialogHeader class="space-y-2">
-                                    <DialogTitle>Registrar área</DialogTitle>
-                                    <DialogDescription>
-                                        Primero elige una ubicación y luego asigna un nombre descriptivo.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <Form
-                                    v-bind="AreaController.store.form()"
-                                    reset-on-success
-                                    @success="handleAreaStored"
-                                    class="space-y-4"
-                                    v-slot="{ errors, processing }"
-                                >
-                                    <div class="grid gap-2">
-                                        <Label for="new-area-location">Ubicación</Label>
-                                        <select
-                                            id="new-area-location"
-                                            v-model="newAreaLocationId"
-                                            name="location_id"
-                                            class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid-border-destructive flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm"
-                                        >
-                                            <option value="">Selecciona una ubicación</option>
-                                            <option
-                                                v-for="location in availableLocations"
-                                                :key="location.id"
-                                                :value="location.id"
-                                            >
-                                                {{ location.name }}
-                                            </option>
-                                        </select>
-                                        <InputError :message="errors.location_id" />
-                                    </div>
-
-                                    <div class="grid gap-2">
-                                        <Label for="new-area-name">Nombre del área</Label>
-                                        <Input
-                                            id="new-area-name"
-                                            v-model="newAreaName"
-                                            name="name"
-                                            autocomplete="off"
-                                            placeholder="Ej. Sala principal"
-                                            :aria-invalid="Boolean(errors.name)"
-                                        />
-                                        <InputError :message="errors.name" />
-                                    </div>
-
-                                    <DialogFooter class="gap-2">
-                                        <DialogClose as-child>
-                                            <Button type="button" variant="secondary">Cancelar</Button>
-                                        </DialogClose>
-                                        <Button type="submit" :disabled="processing">
-                                            Guardar área
-                                        </Button>
-                                    </DialogFooter>
-                                </Form>
-                            </DialogContent>
-                        </Dialog>
-
                         <Dialog :open="isDeviceDialogOpen" @update:open="isDeviceDialogOpen = $event">
                         <DialogTrigger as-child>
                             <Button
                                 size="lg"
-                                class="h-10 min-w-[200px] px-6 gap-2 sm:w-auto"
+                                class="order-2 h-10 min-w-[200px] px-6 gap-2 sm:order-none sm:w-auto"
                                 @click="openCreateDialog"
                             >
                                     <IconPlus class="size-4" />
@@ -674,8 +603,79 @@ const handleAreaFilterChange = (value: number | null): void => {
                             </Form>
                         </DialogContent>
                     </Dialog>
+
+                        <Dialog :open="isAreaDialogOpen" @update:open="isAreaDialogOpen = $event">
+                        <DialogTrigger as-child>
+                            <Button
+                                size="lg"
+                                variant="outline"
+                                class="h-10 min-w-[200px] px-6 gap-2 sm:w-auto order-1 sm:order-none"
+                                @click="isAreaDialogOpen = true"
+                            >
+                                    <IconPlus class="size-4" />
+                                    Nueva área
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent class="sm:max-w-sm">
+                                <DialogHeader class="space-y-2">
+                                    <DialogTitle>Registrar área</DialogTitle>
+                                    <DialogDescription>
+                                        Primero elige una ubicación y luego asigna un nombre descriptivo.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <Form
+                                    v-bind="AreaController.store.form()"
+                                    reset-on-success
+                                    @success="handleAreaStored"
+                                    class="space-y-4"
+                                    v-slot="{ errors, processing }"
+                                >
+                                    <div class="grid gap-2">
+                                        <Label for="new-area-location">Ubicación</Label>
+                                        <select
+                                            id="new-area-location"
+                                            v-model="newAreaLocationId"
+                                            name="location_id"
+                                            class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid-border-destructive flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm"
+                                        >
+                                            <option value="">Selecciona una ubicación</option>
+                                            <option
+                                                v-for="location in availableLocations"
+                                                :key="location.id"
+                                                :value="location.id"
+                                            >
+                                                {{ location.name }}
+                                            </option>
+                                        </select>
+                                        <InputError :message="errors.location_id" />
+                                    </div>
+
+                                    <div class="grid gap-2">
+                                        <Label for="new-area-name">Nombre del área</Label>
+                                        <Input
+                                            id="new-area-name"
+                                            v-model="newAreaName"
+                                            name="name"
+                                            autocomplete="off"
+                                            placeholder="Ej. Sala principal"
+                                            :aria-invalid="Boolean(errors.name)"
+                                        />
+                                        <InputError :message="errors.name" />
+                                    </div>
+
+                                    <DialogFooter class="gap-2">
+                                        <DialogClose as-child>
+                                            <Button type="button" variant="secondary">Cancelar</Button>
+                                        </DialogClose>
+                                        <Button type="submit" :disabled="processing">
+                                            Guardar área
+                                        </Button>
+                                    </DialogFooter>
+                                </Form>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
                 </div>
-            </div>
 
                 <div
                     v-if="hasDevices"
