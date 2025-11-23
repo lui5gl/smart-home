@@ -6,12 +6,12 @@ import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form, Head } from '@inertiajs/vue3';
-import { IconBulb, IconMapPin, IconPlus } from '@tabler/icons-vue';
+import { IconBulb, IconMapPin, IconPencil, IconPlus } from '@tabler/icons-vue';
 import { computed, ref, watch } from 'vue';
 
 type DeviceType = 'switch' | 'dimmer';
@@ -22,6 +22,7 @@ interface DeviceItem {
     location: string | null;
     type: DeviceType;
     created_at: string | null;
+    updated_at: string | null;
 }
 
 interface Props {
@@ -40,18 +41,21 @@ const breadcrumbs: BreadcrumbItem[] = [
 const devices = computed(() => props.devices);
 const hasDevices = computed(() => devices.value.length > 0);
 
-const isAddDeviceOpen = ref(false);
+const deviceDialogMode = ref<'create' | 'edit'>('create');
+const isDeviceDialogOpen = ref(false);
+const editingDevice = ref<DeviceItem | null>(null);
 const deviceName = ref('');
 const deviceLocation = ref('');
 const defaultDeviceType: DeviceType = 'switch';
 const deviceType = ref<DeviceType>(defaultDeviceType);
+const isEditingDevice = computed(() => deviceDialogMode.value === 'edit');
 
 const deviceTypeLabels: Record<DeviceType, string> = {
     switch: 'Encendido / Apagado',
     dimmer: 'Regulable',
 };
 
-const addedAtFormatter = new Intl.DateTimeFormat('es-MX', {
+const dateFormatter = new Intl.DateTimeFormat('es-MX', {
     dateStyle: 'medium',
 });
 
@@ -61,18 +65,36 @@ const resetDeviceForm = (): void => {
     deviceType.value = defaultDeviceType;
 };
 
-watch(isAddDeviceOpen, (isOpen) => {
+const openCreateDialog = (): void => {
+    deviceDialogMode.value = 'create';
+    editingDevice.value = null;
+    resetDeviceForm();
+    isDeviceDialogOpen.value = true;
+};
+
+const openEditDialog = (device: DeviceItem): void => {
+    deviceDialogMode.value = 'edit';
+    editingDevice.value = device;
+    deviceName.value = device.name;
+    deviceLocation.value = device.location ?? '';
+    deviceType.value = device.type;
+    isDeviceDialogOpen.value = true;
+};
+
+watch(isDeviceDialogOpen, (isOpen) => {
     if (!isOpen) {
+        editingDevice.value = null;
+        deviceDialogMode.value = 'create';
         resetDeviceForm();
     }
 });
 
-const formatAddedAt = (timestamp: string | null): string => {
+const formatDate = (timestamp: string | null, fallback = 'Fecha desconocida'): string => {
     if (!timestamp) {
-        return 'Fecha desconocida';
+        return fallback;
     }
 
-    return addedAtFormatter.format(new Date(timestamp));
+    return dateFormatter.format(new Date(timestamp));
 };
 
 const locationLabel = (location: string | null): string => {
@@ -83,10 +105,32 @@ const locationLabel = (location: string | null): string => {
     return location;
 };
 
-const handleDeviceStored = (): void => {
+const handleDeviceSaved = (): void => {
     resetDeviceForm();
-    isAddDeviceOpen.value = false;
+    editingDevice.value = null;
+    deviceDialogMode.value = 'create';
+    isDeviceDialogOpen.value = false;
 };
+
+const dialogTitle = computed(() =>
+    isEditingDevice.value ? 'Editar dispositivo' : 'Agregar dispositivo'
+);
+const dialogDescription = computed(() =>
+    isEditingDevice.value
+        ? 'Actualiza los datos del dispositivo seleccionado.'
+        : 'Ingresa el nombre del dispositivo que deseas agregar.'
+);
+const submitButtonLabel = computed(() =>
+    isEditingDevice.value ? 'Guardar cambios' : 'Agregar'
+);
+
+const deviceFormDefinition = computed(() => {
+    if (isEditingDevice.value && editingDevice.value) {
+        return DeviceController.update.form({ device: editingDevice.value.id });
+    }
+
+    return DeviceController.store.form();
+});
 </script>
 
 <template>
@@ -102,25 +146,25 @@ const handleDeviceStored = (): void => {
                     </p>
                 </div>
 
-                <Dialog :open="isAddDeviceOpen" @update:open="isAddDeviceOpen = $event">
+                <Dialog :open="isDeviceDialogOpen" @update:open="isDeviceDialogOpen = $event">
                     <DialogTrigger as-child>
-                        <Button size="lg">
+                        <Button size="lg" @click="openCreateDialog">
                             <IconPlus class="size-4" />
                             Agregar dispositivo
                         </Button>
                     </DialogTrigger>
                     <DialogContent class="sm:max-w-md">
                         <DialogHeader class="space-y-2">
-                            <DialogTitle>Agregar dispositivo</DialogTitle>
+                            <DialogTitle>{{ dialogTitle }}</DialogTitle>
                             <DialogDescription>
-                                Ingresa el nombre del dispositivo que deseas agregar.
+                                {{ dialogDescription }}
                             </DialogDescription>
                         </DialogHeader>
 
                         <Form
-                            v-bind="DeviceController.store.form()"
+                            v-bind="deviceFormDefinition"
                             reset-on-success
-                            @success="handleDeviceStored"
+                            @success="handleDeviceSaved"
                             class="space-y-6"
                             v-slot="{ errors, processing }"
                         >
@@ -169,7 +213,9 @@ const handleDeviceStored = (): void => {
                                 <DialogClose as-child>
                                     <Button type="button" variant="secondary">Cancelar</Button>
                                 </DialogClose>
-                                <Button type="submit" :disabled="processing">Agregar</Button>
+                                <Button type="submit" :disabled="processing">
+                                    {{ submitButtonLabel }}
+                                </Button>
                             </DialogFooter>
                         </Form>
                     </DialogContent>
@@ -183,10 +229,22 @@ const handleDeviceStored = (): void => {
                             <CardTitle class="text-lg font-semibold">{{ device.name }}</CardTitle>
                             <CardDescription>Agregado el {{ formatAddedAt(device.created_at) }}</CardDescription>
                         </div>
-                        <Badge variant="secondary">
-                            <IconBulb class="size-3.5" />
-                            {{ deviceTypeLabels[device.type] }}
-                        </Badge>
+                        <div class="flex items-center gap-2">
+                            <Badge variant="secondary">
+                                <IconBulb class="size-3.5" />
+                                {{ deviceTypeLabels[device.type] }}
+                            </Badge>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                class="shrink-0"
+                                @click="openEditDialog(device)"
+                            >
+                                <IconPencil class="size-4" />
+                                Editar
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent class="space-y-3 text-sm text-muted-foreground">
                         <p class="flex items-center gap-2">
@@ -212,7 +270,7 @@ const handleDeviceStored = (): void => {
                         Agrega tu primer dispositivo para visualizarlo en esta lista.
                     </p>
                 </div>
-                <Button size="lg" @click="isAddDeviceOpen = true">
+                <Button size="lg" @click="openCreateDialog">
                     <IconPlus class="size-4" />
                     Agregar dispositivo
                 </Button>

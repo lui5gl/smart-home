@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Device;
 use App\Models\User;
 
 test('authenticated users can create devices', function () {
@@ -41,6 +42,61 @@ test('location is optional when creating devices', function () {
         'user_id' => $user->id,
         'name' => 'Foco principal',
         'location' => null,
+        'type' => 'switch',
+    ]);
+});
+
+test('authenticated users can update their devices', function () {
+    $user = User::factory()->create();
+    $device = Device::factory()->for($user)->create([
+        'name' => 'Sensor de temperatura',
+        'location' => 'Sala',
+        'type' => 'dimmer',
+    ]);
+
+    $this->actingAs($user);
+
+    $response = $this->patch(route('devices.update', $device), [
+        'name' => 'Sensor exterior',
+        'location' => '  Terraza ',
+        'type' => 'switch',
+    ]);
+
+    $response->assertRedirect(route('dashboard'));
+    $response->assertSessionHas('success', 'Dispositivo actualizado correctamente.');
+
+    $this->assertDatabaseHas('devices', [
+        'id' => $device->id,
+        'user_id' => $user->id,
+        'name' => 'Sensor exterior',
+        'location' => 'Terraza',
+        'type' => 'switch',
+    ]);
+});
+
+test('users cannot update devices that are not theirs', function () {
+    $owner = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $device = Device::factory()->for($owner)->create([
+        'name' => 'Sensor interior',
+        'location' => 'Pasillo',
+        'type' => 'switch',
+    ]);
+
+    $this->actingAs($otherUser);
+
+    $response = $this->patch(route('devices.update', $device), [
+        'name' => 'Sensor actualizado',
+        'location' => 'Habitación',
+        'type' => 'dimmer',
+    ]);
+
+    $response->assertForbidden();
+
+    $this->assertDatabaseHas('devices', [
+        'id' => $device->id,
+        'name' => 'Sensor interior',
+        'location' => 'Pasillo',
         'type' => 'switch',
     ]);
 });

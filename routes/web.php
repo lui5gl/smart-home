@@ -24,6 +24,7 @@ Route::get('dashboard', function (Request $request) {
             'location' => $device->location,
             'type' => $device->type,
             'created_at' => $device->created_at?->toIso8601String(),
+            'updated_at' => $device->updated_at?->toIso8601String(),
         ]);
 
     return Inertia::render('Dashboard', [
@@ -34,5 +35,9 @@ Route::get('dashboard', function (Request $request) {
 Route::post('devices', [DeviceController::class, 'store'])
     ->middleware(['auth', 'verified'])
     ->name('devices.store');
+
+Route::patch('devices/{device}', [DeviceController::class, 'update'])
+    ->middleware(['auth', 'verified'])
+    ->name('devices.update');
 
 require __DIR__.'/settings.php';
