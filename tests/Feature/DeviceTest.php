@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Device;
+use App\Models\Location;
 use App\Models\User;
 
 test('authenticated users can create devices', function () {
@@ -132,4 +133,46 @@ test('guests cannot create devices', function () {
 
     $response->assertRedirect(route('login'));
     $this->assertDatabaseCount('devices', 0);
+});
+
+test('users can assign devices to saved locations', function () {
+    $user = User::factory()->create();
+    $location = Location::factory()->for($user)->create(['name' => 'Oficina']);
+
+    $this->actingAs($user);
+
+    $response = $this->post(route('devices.store'), [
+        'name' => 'Sensor de presencia',
+        'location' => '',
+        'location_id' => $location->id,
+        'type' => 'switch',
+        'status' => 'off',
+        'brightness' => 100,
+    ]);
+
+    $response->assertRedirect(route('dashboard'));
+
+    $this->assertDatabaseHas('devices', [
+        'user_id' => $user->id,
+        'location_id' => $location->id,
+        'location' => $location->name,
+    ]);
+});
+
+test('users cannot assign devices to locations they do not own', function () {
+    $user = User::factory()->create();
+    $otherLocation = Location::factory()->create(['name' => 'Inválido']);
+
+    $this->actingAs($user);
+
+    $response = $this->from(route('dashboard'))->post(route('devices.store'), [
+        'name' => 'Sensor de puerta',
+        'location' => 'Pasillo',
+        'location_id' => $otherLocation->id,
+        'type' => 'switch',
+        'status' => 'on',
+        'brightness' => 100,
+    ]);
+
+    $response->assertSessionHasErrors('location_id');
 });

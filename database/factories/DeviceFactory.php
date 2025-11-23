@@ -23,6 +23,7 @@ class DeviceFactory extends Factory
             'user_id' => User::factory(),
             'name' => fake()->words(2, true),
             'location' => fake()->optional()->city(),
+            'location_id' => null,
             'type' => $type,
             'status' => fake()->randomElement(['on', 'off']),
             'brightness' => $type === 'dimmer'

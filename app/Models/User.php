@@ -55,4 +55,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Device::class);
     }
+
+    public function locations(): HasMany
+    {
+        return $this->hasMany(Location::class);
+    }
 }

@@ -22,6 +22,7 @@ interface DeviceItem {
     id: number;
     name: string;
     location: string | null;
+    location_id: number | null;
     type: DeviceType;
     status: DeviceStatus;
     brightness: number;
@@ -29,8 +30,14 @@ interface DeviceItem {
     updated_at: string | null;
 }
 
+interface LocationItem {
+    id: number;
+    name: string;
+}
+
 interface Props {
     devices: DeviceItem[];
+    locations: LocationItem[];
 }
 
 const props = defineProps<Props>();
@@ -44,6 +51,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const devices = computed(() => props.devices);
 const hasDevices = computed(() => devices.value.length > 0);
+const availableLocations = computed(() => props.locations);
 
 const deviceDialogMode = ref<'create' | 'edit'>('create');
 const isDeviceDialogOpen = ref(false);
@@ -57,6 +65,7 @@ const deviceType = ref<DeviceType>(defaultDeviceType);
 const defaultDeviceStatus: DeviceStatus = 'off';
 const deviceStatus = ref<DeviceStatus>(defaultDeviceStatus);
 const deviceBrightness = ref<number>(defaultSwitchBrightness);
+const selectedDeviceLocationId = ref<number | ''>('');
 const isEditingDevice = computed(() => deviceDialogMode.value === 'edit');
 const showBrightnessControl = computed(() => deviceType.value === 'dimmer');
 
@@ -83,6 +92,7 @@ const resetDeviceForm = (): void => {
     deviceType.value = defaultDeviceType;
     deviceStatus.value = defaultDeviceStatus;
     deviceBrightness.value = defaultSwitchBrightness;
+    selectedDeviceLocationId.value = '';
 };
 
 const openCreateDialog = (): void => {
@@ -100,6 +110,7 @@ const openEditDialog = (device: DeviceItem): void => {
     deviceType.value = device.type;
     deviceStatus.value = device.status;
     deviceBrightness.value = device.brightness;
+    selectedDeviceLocationId.value = device.location_id ?? '';
     isDeviceDialogOpen.value = true;
 };
 
@@ -144,6 +155,19 @@ watch(deviceType, (current, previous) => {
     if (current === 'dimmer' && previous === 'switch') {
         deviceBrightness.value = defaultDimmerBrightness;
     }
+});
+
+watch(selectedDeviceLocationId, (value) => {
+    if (!value) {
+        deviceLocation.value = '';
+
+        return;
+    }
+
+    const numericValue = Number(value);
+    const selectedLocation = availableLocations.value.find((location) => location.id === numericValue);
+
+    deviceLocation.value = selectedLocation?.name ?? '';
 });
 
 const setStatusUpdating = (deviceId: number, value: boolean): void => {
@@ -316,8 +340,29 @@ const deviceFormDefinition = computed(() => {
                                     />
                                     <InputError :message="errors.name" />
                                 </div>
+
                                 <div class="grid gap-2">
-                                    <Label for="device-location">Ubicación</Label>
+                                    <Label for="device-location-id">Ubicación guardada</Label>
+                                    <select
+                                        id="device-location-id"
+                                        v-model="selectedDeviceLocationId"
+                                        name="location_id"
+                                        class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid-border-destructive flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm"
+                                    >
+                                        <option value="">Sin ubicación</option>
+                                        <option
+                                            v-for="location in availableLocations"
+                                            :key="location.id"
+                                            :value="location.id"
+                                        >
+                                            {{ location.name }}
+                                        </option>
+                                    </select>
+                                    <InputError :message="errors.location_id" />
+                                </div>
+
+                                <div v-if="!selectedDeviceLocationId" class="grid gap-2">
+                                    <Label for="device-location">Nombre de la ubicación (opcional)</Label>
                                     <Input
                                         id="device-location"
                                         v-model="deviceLocation"
@@ -328,179 +373,181 @@ const deviceFormDefinition = computed(() => {
                                     />
                                     <InputError :message="errors.location" />
                                 </div>
-                                <div class="grid gap-2">
-                                    <Label for="device-type">Tipo de dispositivo</Label>
-                                    <select
-                                        id="device-type"
-                                        v-model="deviceType"
-                                        name="type"
-                                        class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm"
-                                    >
-                                        <option value="switch">Encendido / Apagado</option>
-                                        <option value="dimmer">Regulable</option>
-                                    </select>
-                                    <InputError :message="errors.type" />
-                                </div>
-                                <div class="grid gap-2">
-                                    <Label for="device-status">Estado</Label>
-                                    <select
-                                        id="device-status"
-                                        v-model="deviceStatus"
-                                        name="status"
-                                        class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm"
-                                    >
-                                        <option value="on">Encendido</option>
-                                        <option value="off">Apagado</option>
-                                    </select>
-                                    <InputError :message="errors.status" />
-                                </div>
-                                <div
-                                    v-if="showBrightnessControl"
-                                    class="grid gap-2"
-                                >
-                                    <div class="flex items-center justify-between">
-                                        <Label for="device-brightness">Nivel de potencia</Label>
-                                        <span class="text-sm text-muted-foreground"
-                                            >{{ deviceBrightnessLabel }}%</span
+
+                                    <div class="grid gap-2">
+                                        <Label for="device-type">Tipo de dispositivo</Label>
+                                        <select
+                                            id="device-type"
+                                            v-model="deviceType"
+                                            name="type"
+                                            class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid-border-destructive flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm"
                                         >
+                                            <option value="switch">Encendido / Apagado</option>
+                                            <option value="dimmer">Regulable</option>
+                                        </select>
+                                        <InputError :message="errors.type" />
+                                    </div>
+
+                                    <div class="grid gap-2">
+                                        <Label for="device-status">Estado</Label>
+                                        <select
+                                            id="device-status"
+                                            v-model="deviceStatus"
+                                            name="status"
+                                            class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid-border-destructive flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm"
+                                        >
+                                            <option value="on">Encendido</option>
+                                            <option value="off">Apagado</option>
+                                        </select>
+                                        <InputError :message="errors.status" />
+                                    </div>
+
+                                    <div
+                                        v-if="showBrightnessControl"
+                                        class="grid gap-2"
+                                    >
+                                        <div class="flex items-center justify-between">
+                                            <Label for="device-brightness">Nivel de potencia</Label>
+                                            <span class="text-sm text-muted-foreground"
+                                                >{{ deviceBrightnessLabel }}%</span
+                                            >
+                                        </div>
+                                        <input
+                                            id="device-brightness"
+                                            v-model.number="deviceBrightness"
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            step="5"
+                                            name="brightness"
+                                            class="accent-primary h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary"
+                                        />
+                                        <div class="flex justify-between text-xs text-muted-foreground">
+                                            <span>0%</span>
+                                            <span>50%</span>
+                                            <span>100%</span>
+                                        </div>
+                                        <InputError :message="errors.brightness" />
                                     </div>
                                     <input
-                                        id="device-brightness"
-                                        v-model.number="deviceBrightness"
-                                        type="range"
-                                        min="0"
-                                        max="100"
-                                        step="5"
+                                        v-else
+                                        type="hidden"
                                         name="brightness"
-                                        class="accent-primary h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary"
+                                        :value="deviceBrightness"
                                     />
-                                    <div class="flex justify-between text-xs text-muted-foreground">
-                                        <span>0%</span>
-                                        <span>50%</span>
-                                        <span>100%</span>
-                                    </div>
-                                    <InputError :message="errors.brightness" />
+                                </div>
+
+                                <DialogFooter class="gap-2">
+                                    <DialogClose as-child>
+                                        <Button type="button" variant="secondary">Cancelar</Button>
+                                    </DialogClose>
+                                    <Button type="submit" :disabled="processing">
+                                        {{ submitButtonLabel }}
+                                    </Button>
+                                </DialogFooter>
+                            </Form>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+
+                <div v-if="hasDevices" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <Card v-for="device in devices" :key="device.id" class="border-border/70">
+                        <CardHeader class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div class="space-y-1">
+                                <CardTitle class="text-lg font-semibold">{{ device.name }}</CardTitle>
+                                <CardDescription class="flex items-center gap-2 text-sm">
+                                    <IconMapPin class="size-4 text-foreground/70" />
+                                    <span>{{ locationLabel(device.location) }}</span>
+                                </CardDescription>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <Badge variant="secondary">
+                                    <IconBulb class="size-3.5" />
+                                    {{ deviceTypeLabels[device.type] }}
+                                </Badge>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    class="shrink-0"
+                                    @click="openEditDialog(device)"
+                                >
+                                    <IconPencil class="size-4" />
+                                    Editar
+                                </Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent class="space-y-4 text-sm text-muted-foreground">
+                            <div
+                                class="flex flex-col gap-3 rounded-lg border border-border/60 p-3 text-foreground/80 sm:flex-row sm:items-center sm:justify-between"
+                            >
+                                <div class="flex flex-col">
+                                    <span class="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                        Estado actual
+                                    </span>
+                                    <span class="text-base font-medium text-foreground">
+                                        {{ statusLabels[device.status] }}
+                                    </span>
+                                </div>
+                                <Button
+                                    type="button"
+                                    :variant="device.status === 'on' ? 'outline' : 'default'"
+                                    size="sm"
+                                    class="w-full sm:w-auto"
+                                    :disabled="statusUpdating[device.id]"
+                                    @click="handleStatusToggle(device)"
+                                >
+                                    <Spinner v-if="statusUpdating[device.id]" class="size-4" />
+                                    <span v-else>{{ statusButtonLabel(device) }}</span>
+                                </Button>
+                            </div>
+                            <div
+                                v-if="device.type === 'dimmer'"
+                                class="space-y-3 rounded-lg border border-border/60 p-3 text-foreground"
+                            >
+                                <div class="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground/80">
+                                    <span>Nivel de potencia</span>
+                                    <span class="text-base font-semibold text-foreground">
+                                        {{ currentDeviceBrightness(device) }}%
+                                    </span>
                                 </div>
                                 <input
-                                    v-else
-                                    type="hidden"
-                                    name="brightness"
-                                    :value="deviceBrightness"
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    step="5"
+                                    :value="currentDeviceBrightness(device)"
+                                    class="accent-primary h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary disabled:cursor-not-allowed"
+                                    :disabled="brightnessUpdating[device.id]"
+                                    @input="handleBrightnessInput(device, $event.target.value)"
+                                    @change="handleBrightnessChange(device, $event.target.value)"
                                 />
+                                <div class="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span>Apagado</span>
+                                    <span>Máximo</span>
+                                </div>
+                                <p v-if="brightnessUpdating[device.id]" class="text-xs text-muted-foreground">
+                                    Actualizando potencia...
+                                </p>
                             </div>
-
-                            <DialogFooter class="gap-2">
-                                <DialogClose as-child>
-                                    <Button type="button" variant="secondary">Cancelar</Button>
-                                </DialogClose>
-                                <Button type="submit" :disabled="processing">
-                                    {{ submitButtonLabel }}
-                                </Button>
-                            </DialogFooter>
-                        </Form>
-                    </DialogContent>
-                </Dialog>
-            </div>
-
-            <div v-if="hasDevices" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <Card v-for="device in devices" :key="device.id" class="border-border/70">
-                    <CardHeader class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div class="space-y-1">
-                            <CardTitle class="text-lg font-semibold">{{ device.name }}</CardTitle>
-                            <CardDescription class="flex items-center gap-2 text-sm">
-                                <IconMapPin class="size-4 text-foreground/70" />
-                                <span>{{ locationLabel(device.location) }}</span>
-                            </CardDescription>
-                        </div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <Badge variant="secondary">
-                                <IconBulb class="size-3.5" />
-                                {{ deviceTypeLabels[device.type] }}
-                            </Badge>
-                            <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                class="shrink-0"
-                                @click="openEditDialog(device)"
-                            >
-                                <IconPencil class="size-4" />
-                                Editar
-                            </Button>
-                        </div>
-                    </CardHeader>
-                    <CardContent class="space-y-4 text-sm text-muted-foreground">
-                        <div
-                            class="flex flex-col gap-3 rounded-lg border border-border/60 p-3 text-foreground/80 sm:flex-row sm:items-center sm:justify-between"
-                        >
-                            <div class="flex flex-col">
-                                <span class="text-xs uppercase tracking-wide text-muted-foreground/80">
-                                    Estado actual
-                                </span>
-                                <span class="text-base font-medium text-foreground">
-                                    {{ statusLabels[device.status] }}
-                                </span>
-                            </div>
-                            <Button
-                                type="button"
-                                :variant="device.status === 'on' ? 'outline' : 'default'"
-                                size="sm"
-                                class="w-full sm:w-auto"
-                                :disabled="statusUpdating[device.id]"
-                                @click="handleStatusToggle(device)"
-                            >
-                                <Spinner v-if="statusUpdating[device.id]" class="size-4" />
-                                <span v-else>{{ statusButtonLabel(device) }}</span>
-                            </Button>
-                        </div>
-                        <div
-                            v-if="device.type === 'dimmer'"
-                            class="space-y-3 rounded-lg border border-border/60 p-3 text-foreground"
-                        >
-                            <div class="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground/80">
-                                <span>Nivel de potencia</span>
-                                <span class="text-base font-semibold text-foreground">
-                                    {{ currentDeviceBrightness(device) }}%
-                                </span>
-                            </div>
-                            <input
-                                type="range"
-                                min="0"
-                                max="100"
-                                step="5"
-                                :value="currentDeviceBrightness(device)"
-                                class="accent-primary h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary disabled:cursor-not-allowed"
-                                :disabled="brightnessUpdating[device.id]"
-                                @input="handleBrightnessInput(device, $event.target.value)"
-                                @change="handleBrightnessChange(device, $event.target.value)"
-                            />
-                            <div class="flex items-center justify-between text-xs text-muted-foreground">
-                                <span>Apagado</span>
-                                <span>Máximo</span>
-                            </div>
-                            <p v-if="brightnessUpdating[device.id]" class="text-xs text-muted-foreground">
-                                Actualizando brillo...
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <div
-                v-else
-                class="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border/80 px-6 py-12 text-center"
-            >
-                <IconBulb class="size-10 text-muted-foreground" />
-                <div class="space-y-1">
-                    <p class="text-base font-medium">Aún no tienes dispositivos</p>
-                    <p class="text-sm text-muted-foreground">
-                        Agrega tu primer dispositivo para visualizarlo en esta lista.
-                    </p>
+                        </CardContent>
+                    </Card>
                 </div>
-                <Button size="lg" @click="openCreateDialog">
-                    <IconPlus class="size-4" />
-                    Agregar dispositivo
-                </Button>
+                <div
+                    v-else
+                    class="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border/80 px-6 py-12 text-center"
+                >
+                    <IconBulb class="size-10 text-muted-foreground" />
+                    <div class="space-y-1">
+                        <p class="text-base font-medium">Aún no tienes dispositivos</p>
+                        <p class="text-sm text-muted-foreground">
+                            Agrega tu primer dispositivo para visualizarlo en esta lista.
+                        </p>
+                    </div>
+                    <Button size="lg" @click="openCreateDialog">
+                        <IconPlus class="size-4" />
+                        Agregar dispositivo
+                    </Button>
             </div>
         </div>
     </AppLayout>
