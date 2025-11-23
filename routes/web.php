@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AreaController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\LocationController;
 use App\Models\Device;
@@ -16,17 +17,49 @@ Route::get('/', function () {
 
 Route::get('dashboard', function (Request $request) {
     $user = $request->user();
-    $locations = $user->locations()->orderBy('name')->get(['id', 'name']);
     $locationFilter = $request->query('location');
+    $areaFilter = $request->query('area');
     $locationId = is_numeric($locationFilter) ? (int) $locationFilter : null;
+    $areaId = is_numeric($areaFilter) ? (int) $areaFilter : null;
     $showUnassigned = $locationFilter === 'none';
 
-    $devicesQuery = $user->devices()->with('location')->latest();
+    $locations = $user->locations()
+        ->with(['areas' => fn ($query) => $query->orderBy('name')])
+        ->orderBy('name')
+        ->get()
+        ->map(fn ($location) => [
+            'id' => $location->id,
+            'name' => $location->name,
+            'areas' => $location->areas->map(fn ($area) => [
+                'id' => $area->id,
+                'name' => $area->name,
+            ]),
+        ]);
 
-    if ($showUnassigned) {
-        $devicesQuery->whereNull('location_id');
+    $devicesQuery = $user->devices()->with(['location', 'area'])->latest();
+    $filters = [
+        'location' => null,
+        'area' => null,
+    ];
+
+    if ($areaId) {
+        $area = $user->areas()->whereKey($areaId)->first();
+
+        if ($area) {
+            $devicesQuery->where('area_id', $area->id);
+            $filters['area'] = $area->id;
+            $filters['location'] = $area->location_id;
+        }
+    } elseif ($showUnassigned) {
+        $devicesQuery->whereNull('area_id')->whereNull('location_id');
+        $filters['location'] = 'none';
     } elseif ($locationId) {
-        $devicesQuery->where('location_id', $locationId);
+        $userLocation = $user->locations()->whereKey($locationId)->first();
+
+        if ($userLocation) {
+            $devicesQuery->where('location_id', $userLocation->id);
+            $filters['location'] = $userLocation->id;
+        }
     }
 
     $devices = $devicesQuery
@@ -34,8 +67,9 @@ Route::get('dashboard', function (Request $request) {
         ->map(fn (Device $device) => [
             'id' => $device->id,
             'name' => $device->name,
-            'location' => $device->location?->name ?? $device->location,
+            'location' => $device->area?->name ?? $device->location?->name ?? $device->location,
             'location_id' => $device->location_id,
+            'area_id' => $device->area_id,
             'type' => $device->type,
             'status' => $device->status,
             'brightness' => $device->brightness,
@@ -46,9 +80,7 @@ Route::get('dashboard', function (Request $request) {
     return Inertia::render('Dashboard', [
         'devices' => $devices,
         'locations' => $locations,
-        'filters' => [
-            'location' => $showUnassigned ? 'none' : $locationId,
-        ],
+        'filters' => $filters,
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
@@ -59,6 +91,10 @@ Route::post('devices', [DeviceController::class, 'store'])
 Route::patch('devices/{device}', [DeviceController::class, 'update'])
     ->middleware(['auth', 'verified'])
     ->name('devices.update');
+
+Route::post('areas', [AreaController::class, 'store'])
+    ->middleware(['auth', 'verified'])
+    ->name('areas.store');
 
 Route::post('locations', [LocationController::class, 'store'])
     ->middleware(['auth', 'verified'])

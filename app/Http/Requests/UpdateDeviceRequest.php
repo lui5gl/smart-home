@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Area;
 use App\Models\Device;
-use App\Models\Location;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -26,28 +26,30 @@ class UpdateDeviceRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $name = $this->input('name');
-        $location = $this->input('location');
-        $locationId = $this->input('location_id');
+        $areaId = $this->input('area_id');
         $brightness = $this->input('brightness');
         $type = $this->input('type');
         $user = $this->user();
-        $resolvedLocation = is_string($location) ? trim($location) : $location;
-        $resolvedLocationId = filled($locationId) ? (int) $locationId : null;
+        $resolvedLocation = null;
+        $resolvedLocationId = null;
+        $resolvedAreaId = null;
 
-        if ($user !== null && filled($locationId)) {
-            /** @var Location|null $userLocation */
-            $userLocation = $user->locations()->whereKey($locationId)->first();
+        if ($user !== null && filled($areaId)) {
+            /** @var Area|null $area */
+            $area = $user->areas()->with('location')->whereKey($areaId)->first();
 
-            if ($userLocation !== null) {
-                $resolvedLocation = $userLocation->name;
-                $resolvedLocationId = $userLocation->id;
+            if ($area !== null) {
+                $resolvedAreaId = $area->id;
+                $resolvedLocationId = $area->location_id;
+                $resolvedLocation = $area->name;
             }
         }
 
         $this->merge([
             'name' => is_string($name) ? trim($name) : $name,
-            'location' => filled($resolvedLocation) ? $resolvedLocation : null,
+            'location' => $resolvedLocation,
             'location_id' => $resolvedLocationId,
+            'area_id' => $resolvedAreaId,
             'brightness' => $type === 'dimmer'
                 ? (int) ($brightness ?? 50)
                 : 100,
@@ -64,10 +66,11 @@ class UpdateDeviceRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'location' => ['nullable', 'string', 'max:255'],
-            'location_id' => [
-                'nullable',
+            'location_id' => ['nullable', 'integer'],
+            'area_id' => [
+                'required',
                 'integer',
-                Rule::exists('locations', 'id')->where('user_id', $this->user()?->id ?? 0),
+                Rule::exists('areas', 'id')->where('user_id', $this->user()?->id ?? 0),
             ],
             'type' => ['required', Rule::in(['switch', 'dimmer'])],
             'status' => ['required', Rule::in(['on', 'off'])],

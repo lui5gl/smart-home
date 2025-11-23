@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import AreaController from '@/actions/App/Http/Controllers/AreaController';
 import DeviceController from '@/actions/App/Http/Controllers/DeviceController';
+import LocationController from '@/actions/App/Http/Controllers/LocationController';
 import InputError from '@/components/InputError.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
@@ -23,6 +25,7 @@ interface DeviceItem {
     name: string;
     location: string | null;
     location_id: number | null;
+    area_id: number | null;
     type: DeviceType;
     status: DeviceStatus;
     brightness: number;
@@ -30,14 +33,26 @@ interface DeviceItem {
     updated_at: string | null;
 }
 
+interface AreaItem {
+    id: number;
+    name: string;
+    location_id: number;
+}
+
 interface LocationItem {
     id: number;
     name: string;
+    areas: AreaItem[];
+}
+
+interface DashboardFilters {
+    location: number | 'none' | null;
 }
 
 interface Props {
     devices: DeviceItem[];
     locations: LocationItem[];
+    filters: DashboardFilters;
 }
 
 const props = defineProps<Props>();
@@ -52,12 +67,14 @@ const breadcrumbs: BreadcrumbItem[] = [
 const devices = computed(() => props.devices);
 const hasDevices = computed(() => devices.value.length > 0);
 const availableLocations = computed(() => props.locations);
+const filters = computed(() => props.filters);
+const locationFilter = computed(() => filters.value.location);
+const areaFilter = computed(() => filters.value.area ?? null);
 
 const deviceDialogMode = ref<'create' | 'edit'>('create');
 const isDeviceDialogOpen = ref(false);
 const editingDevice = ref<DeviceItem | null>(null);
 const deviceName = ref('');
-const deviceLocation = ref('');
 const defaultDeviceType: DeviceType = 'switch';
 const defaultSwitchBrightness = 100;
 const defaultDimmerBrightness = 50;
@@ -66,6 +83,7 @@ const defaultDeviceStatus: DeviceStatus = 'off';
 const deviceStatus = ref<DeviceStatus>(defaultDeviceStatus);
 const deviceBrightness = ref<number>(defaultSwitchBrightness);
 const selectedDeviceLocationId = ref<number | ''>('');
+const selectedDeviceAreaId = ref<number | ''>('');
 const isEditingDevice = computed(() => deviceDialogMode.value === 'edit');
 const showBrightnessControl = computed(() => deviceType.value === 'dimmer');
 
@@ -85,14 +103,39 @@ const dateFormatter = new Intl.DateTimeFormat('es-MX', {
 const statusUpdating = reactive<Record<number, boolean>>({});
 const brightnessUpdating = reactive<Record<number, boolean>>({});
 const brightnessPreview = reactive<Record<number, number | undefined>>({});
+const isLocationDialogOpen = ref(false);
+const newLocationName = ref('');
+const isAreaDialogOpen = ref(false);
+const newAreaName = ref('');
+const newAreaLocationId = ref<number | ''>('');
+
+const areasForSelectedLocation = computed(() => {
+    if (!selectedDeviceLocationId.value) {
+        return [];
+    }
+
+    const location = availableLocations.value.find((item) => item.id === Number(selectedDeviceLocationId.value));
+
+    return location?.areas ?? [];
+});
+
+const areasForFilter = computed(() => {
+    if (typeof locationFilter.value !== 'number') {
+        return [];
+    }
+
+    const location = availableLocations.value.find((item) => item.id === locationFilter.value);
+
+    return location?.areas ?? [];
+});
 
 const resetDeviceForm = (): void => {
     deviceName.value = '';
-    deviceLocation.value = '';
     deviceType.value = defaultDeviceType;
     deviceStatus.value = defaultDeviceStatus;
     deviceBrightness.value = defaultSwitchBrightness;
     selectedDeviceLocationId.value = '';
+    selectedDeviceAreaId.value = '';
 };
 
 const openCreateDialog = (): void => {
@@ -106,11 +149,11 @@ const openEditDialog = (device: DeviceItem): void => {
     deviceDialogMode.value = 'edit';
     editingDevice.value = device;
     deviceName.value = device.name;
-    deviceLocation.value = device.location ?? '';
     deviceType.value = device.type;
     deviceStatus.value = device.status;
     deviceBrightness.value = device.brightness;
     selectedDeviceLocationId.value = device.location_id ?? '';
+    selectedDeviceAreaId.value = device.area_id ?? '';
     isDeviceDialogOpen.value = true;
 };
 
@@ -159,7 +202,7 @@ watch(deviceType, (current, previous) => {
 
 watch(selectedDeviceLocationId, (value) => {
     if (!value) {
-        deviceLocation.value = '';
+        selectedDeviceAreaId.value = '';
 
         return;
     }
@@ -167,7 +210,17 @@ watch(selectedDeviceLocationId, (value) => {
     const numericValue = Number(value);
     const selectedLocation = availableLocations.value.find((location) => location.id === numericValue);
 
-    deviceLocation.value = selectedLocation?.name ?? '';
+    if (!selectedLocation) {
+        selectedDeviceAreaId.value = '';
+
+        return;
+    }
+
+    const hasCurrentArea = selectedLocation.areas.some((area) => area.id === Number(selectedDeviceAreaId.value));
+
+    if (!hasCurrentArea) {
+        selectedDeviceAreaId.value = '';
+    }
 });
 
 const setStatusUpdating = (deviceId: number, value: boolean): void => {
@@ -275,6 +328,53 @@ const deviceFormDefinition = computed(() => {
 
     return DeviceController.store.form();
 });
+
+const handleLocationStored = (): void => {
+    newLocationName.value = '';
+    isLocationDialogOpen.value = false;
+};
+
+const handleAreaStored = (): void => {
+    newAreaName.value = '';
+    newAreaLocationId.value = '';
+    isAreaDialogOpen.value = false;
+};
+
+const applyFilters = (locationValue: number | 'none' | null, areaValue: number | null): void => {
+    const query: Record<string, string | number> =
+        locationValue === null
+            ? {}
+            : {
+                  location: locationValue === 'none' ? 'none' : locationValue,
+              };
+
+    if (areaValue !== null) {
+        query.area = areaValue;
+    }
+
+    router.get(
+        dashboard({ query }).url,
+        {},
+        {
+            preserveScroll: true,
+            preserveState: true,
+        }
+    );
+};
+
+const handleLocationFilterChange = (value: number | 'none' | null): void => {
+    applyFilters(value, null);
+};
+
+const handleAreaFilterChange = (value: number | null): void => {
+    const currentLocation = locationFilter.value;
+
+    if (typeof currentLocation !== 'number') {
+        return;
+    }
+
+    applyFilters(currentLocation, value);
+};
 </script>
 
 <template>
@@ -290,28 +390,129 @@ const deviceFormDefinition = computed(() => {
                     </p>
                 </div>
 
-                <Dialog :open="isDeviceDialogOpen" @update:open="isDeviceDialogOpen = $event">
-                    <DialogTrigger as-child>
-                        <Button size="lg" @click="openCreateDialog">
-                            <IconPlus class="size-4" />
-                            Agregar dispositivo
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent class="sm:max-w-md">
-                        <DialogHeader class="space-y-2">
-                            <DialogTitle>{{ dialogTitle }}</DialogTitle>
-                            <DialogDescription>
-                                {{ dialogDescription }}
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        <Form
-                            v-bind="deviceFormDefinition"
-                            reset-on-success
-                            @success="handleDeviceSaved"
-                            class="space-y-6"
-                            v-slot="{ errors, processing }"
+                <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+                    <div class="flex flex-col gap-1 text-sm text-muted-foreground">
+                        <Label for="location-filter" class="font-medium text-foreground">Filtrar por ubicación</Label>
+                        <select
+                            id="location-filter"
+                            class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid-border-destructive flex h-9 min-w-[220px] rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm"
+                            :value="locationFilter ?? ''"
+                            @change="
+                                handleLocationFilterChange(
+                                    ($event.target as HTMLSelectElement).value === ''
+                                        ? null
+                                        : ($event.target as HTMLSelectElement).value === 'none'
+                                            ? 'none'
+                                            : Number(($event.target as HTMLSelectElement).value)
+                                )
+                            "
                         >
+                            <option value="">Todas las ubicaciones</option>
+                            <option value="none">Sin ubicación</option>
+                            <option
+                                v-for="location in availableLocations"
+                                :key="location.id"
+                                :value="location.id"
+                            >
+                                {{ location.name }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="flex flex-col gap-1 text-sm text-muted-foreground">
+                        <Label for="area-filter" class="font-medium text-foreground">Filtrar por área</Label>
+                        <select
+                            id="area-filter"
+                            class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid-border-destructive flex h-9 min-w-[220px] rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm disabled:opacity-70"
+                            :disabled="typeof locationFilter !== 'number'"
+                            :value="areaFilter ?? ''"
+                            @change="
+                                handleAreaFilterChange(
+                                    ($event.target as HTMLSelectElement).value === ''
+                                        ? null
+                                        : Number(($event.target as HTMLSelectElement).value)
+                                )
+                            "
+                        >
+                            <option value="">Todas las áreas</option>
+                            <option
+                                v-for="area in areasForFilter"
+                                :key="area.id"
+                                :value="area.id"
+                            >
+                                {{ area.name }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <Dialog :open="isLocationDialogOpen" @update:open="isLocationDialogOpen = $event">
+                        <DialogTrigger as-child>
+                            <Button variant="outline" class="sm:w-auto" @click="isLocationDialogOpen = true">
+                                <IconPlus class="size-4" />
+                                Nueva ubicación
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent class="sm:max-w-sm">
+                            <DialogHeader class="space-y-2">
+                                <DialogTitle>Registrar ubicación</DialogTitle>
+                                <DialogDescription>
+                                    Crea ubicaciones principales (por ejemplo: Casa, Oficina).
+                                </DialogDescription>
+                            </DialogHeader>
+                            <Form
+                                v-bind="LocationController.store.form()"
+                                reset-on-success
+                                @success="handleLocationStored"
+                                class="space-y-4"
+                                v-slot="{ errors, processing }"
+                            >
+                                <div class="grid gap-2">
+                                    <Label for="new-location-name">Nombre</Label>
+                                    <Input
+                                        id="new-location-name"
+                                        v-model="newLocationName"
+                                        name="name"
+                                        autocomplete="off"
+                                        placeholder="Ej. Casa principal"
+                                        :aria-invalid="Boolean(errors.name)"
+                                    />
+                                    <InputError :message="errors.name" />
+                                </div>
+
+                                <DialogFooter class="gap-2">
+                                    <DialogClose as-child>
+                                        <Button type="button" variant="secondary">Cancelar</Button>
+                                    </DialogClose>
+                                    <Button type="submit" :disabled="processing">
+                                        Guardar
+                                    </Button>
+                                </DialogFooter>
+                            </Form>
+                        </DialogContent>
+                    </Dialog>
+
+                    <Dialog :open="isDeviceDialogOpen" @update:open="isDeviceDialogOpen = $event">
+                        <DialogTrigger as-child>
+                            <Button size="lg" class="sm:w-auto" @click="openCreateDialog">
+                                <IconPlus class="size-4" />
+                                Agregar dispositivo
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent class="sm:max-w-md">
+                            <DialogHeader class="space-y-2">
+                                <DialogTitle>{{ dialogTitle }}</DialogTitle>
+                                <DialogDescription>
+                                    {{ dialogDescription }}
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <Form
+                                v-bind="deviceFormDefinition"
+                                reset-on-success
+                                @success="handleDeviceSaved"
+                                class="space-y-6"
+                                v-slot="{ errors, processing }"
+                            >
                             <div
                                 v-if="isEditingDevice && editingDevice"
                                 class="space-y-1 rounded-lg border border-border/70 bg-muted/30 p-3 text-xs text-muted-foreground"
@@ -361,17 +562,110 @@ const deviceFormDefinition = computed(() => {
                                     <InputError :message="errors.location_id" />
                                 </div>
 
-                                <div v-if="!selectedDeviceLocationId" class="grid gap-2">
-                                    <Label for="device-location">Nombre de la ubicación (opcional)</Label>
-                                    <Input
-                                        id="device-location"
-                                        v-model="deviceLocation"
-                                        name="location"
-                                        autocomplete="off"
-                                        placeholder="Ej. Sala principal"
-                                        :aria-invalid="Boolean(errors.location)"
-                                    />
-                                    <InputError :message="errors.location" />
+                                <div class="grid gap-2">
+                                    <div class="flex items-center justify-between">
+                                        <Label for="device-area">Área dentro de la ubicación</Label>
+                                        <Dialog :open="isAreaDialogOpen" @update:open="isAreaDialogOpen = $event">
+                                            <DialogTrigger as-child>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    class="h-8 px-2 text-xs"
+                                                    @click="
+                                                        () => {
+                                                            newAreaLocationId.value = selectedDeviceLocationId.value
+                                                                ? Number(selectedDeviceLocationId.value)
+                                                                : '';
+                                                            isAreaDialogOpen.value = true;
+                                                        }
+                                                    "
+                                                >
+                                                    Nueva área
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent class="sm:max-w-sm">
+                                                <DialogHeader class="space-y-2">
+                                                    <DialogTitle>Registrar área</DialogTitle>
+                                                    <DialogDescription>
+                                                        Selecciona una ubicación y asigna un nombre, por ejemplo &quot;Sala principal&quot;.
+                                                    </DialogDescription>
+                                                </DialogHeader>
+                                                <Form
+                                                    v-bind="AreaController.store.form()"
+                                                    reset-on-success
+                                                    @success="handleAreaStored"
+                                                    class="space-y-4"
+                                                    v-slot="{ errors: areaErrors, processing: areaProcessing }"
+                                                >
+                                                    <div class="grid gap-2">
+                                                        <Label for="new-area-location">Ubicación</Label>
+                                                        <select
+                                                            id="new-area-location"
+                                                            v-model="newAreaLocationId"
+                                                            name="location_id"
+                                                            class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid-border-destructive flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm"
+                                                        >
+                                                            <option value="">Selecciona una ubicación</option>
+                                                            <option
+                                                                v-for="location in availableLocations"
+                                                                :key="location.id"
+                                                                :value="location.id"
+                                                            >
+                                                                {{ location.name }}
+                                                            </option>
+                                                        </select>
+                                                        <InputError :message="areaErrors.location_id" />
+                                                    </div>
+
+                                                    <div class="grid gap-2">
+                                                        <Label for="new-area-name">Nombre del área</Label>
+                                                        <Input
+                                                            id="new-area-name"
+                                                            v-model="newAreaName"
+                                                            name="name"
+                                                            autocomplete="off"
+                                                            placeholder="Ej. Sala principal"
+                                                            :aria-invalid="Boolean(areaErrors.name)"
+                                                        />
+                                                        <InputError :message="areaErrors.name" />
+                                                    </div>
+
+                                                    <DialogFooter class="gap-2">
+                                                        <DialogClose as-child>
+                                                            <Button type="button" variant="secondary">Cancelar</Button>
+                                                        </DialogClose>
+                                                        <Button type="submit" :disabled="areaProcessing">
+                                                            Guardar área
+                                                        </Button>
+                                                    </DialogFooter>
+                                                </Form>
+                                            </DialogContent>
+                                        </Dialog>
+                                    </div>
+                                    <select
+                                        id="device-area"
+                                        v-model="selectedDeviceAreaId"
+                                        name="area_id"
+                                        class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid-border-destructive flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm"
+                                        :disabled="!selectedDeviceLocationId"
+                                    >
+                                        <option value="">
+                                            {{
+                                                selectedDeviceLocationId
+                                                    ? 'Selecciona un área'
+                                                    : 'Elige primero una ubicación'
+                                            }}
+                                        </option>
+                                        <option
+                                            v-for="area in areasForSelectedLocation"
+                                            :key="area.id"
+                                            :value="area.id"
+                                        >
+                                            {{ area.name }}
+                                        </option>
+                                    </select>
+                                    <InputError :message="errors.area_id" />
                                 </div>
 
                                     <div class="grid gap-2">
@@ -557,6 +851,7 @@ const deviceFormDefinition = computed(() => {
                         <IconPlus class="size-4" />
                         Agregar dispositivo
                     </Button>
+                </div>
             </div>
         </div>
     </AppLayout>

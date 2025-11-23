@@ -2,16 +2,14 @@
 
 namespace App\Models;
 
-use App\Models\Area;
-use App\Models\Location;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Device extends Model
+class Area extends Model
 {
-    /** @use HasFactory<\Database\Factories\DeviceFactory> */
+    /** @use HasFactory<\Database\Factories\AreaFactory> */
     use HasFactory;
 
     /**
@@ -19,13 +17,8 @@ class Device extends Model
      */
     protected $fillable = [
         'user_id',
-        'name',
-        'location',
         'location_id',
-        'type',
-        'status',
-        'brightness',
-        'area_id',
+        'name',
     ];
 
     public function user(): BelongsTo
@@ -38,8 +31,8 @@ class Device extends Model
         return $this->belongsTo(Location::class);
     }
 
-    public function area(): BelongsTo
+    public function devices(): HasMany
     {
-        return $this->belongsTo(Area::class);
+        return $this->hasMany(Device::class);
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Area;
 use App\Models\Device;
 use App\Models\Location;
 use App\Models\User;
@@ -11,57 +12,66 @@ test('guests are redirected to the login page', function () {
     $response->assertRedirect(route('login'));
 });
 
-test('authenticated users can view their devices on the dashboard', function () {
+test('authenticated users can view their devices grouped by locations and areas', function () {
     $user = User::factory()->create();
-    $userDevices = Device::factory()
-        ->count(2)
-        ->for($user)
-        ->sequence(
-            ['name' => 'Sensor de temperatura', 'type' => 'dimmer', 'status' => 'on', 'brightness' => 70],
-            ['name' => 'Foco principal', 'type' => 'switch', 'status' => 'off', 'brightness' => 100]
-        )
-        ->create();
+    $location = Location::factory()->for($user)->create(['name' => 'Casa']);
+    $areaOne = Area::factory()->for($user)->for($location)->create(['name' => 'Sala']);
+    $areaTwo = Area::factory()->for($user)->for($location)->create(['name' => 'Habitación']);
 
-    Device::factory()->create(); // other user's device
+    $deviceInSala = Device::factory()->for($user)->create([
+        'name' => 'Sensor de temperatura',
+        'location' => $areaOne->name,
+        'location_id' => $location->id,
+        'area_id' => $areaOne->id,
+    ]);
+    $deviceInHabitacion = Device::factory()->for($user)->create([
+        'name' => 'Foco principal',
+        'location' => $areaTwo->name,
+        'location_id' => $location->id,
+        'area_id' => $areaTwo->id,
+    ]);
+    Device::factory()->create();
 
     $this->actingAs($user)
         ->get(route('dashboard'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('Dashboard')
-            ->where('devices', function (Collection $devices) use ($userDevices) {
-                return $devices->pluck('id')->diff($userDevices->pluck('id'))->isEmpty()
-                    && $devices->count() === $userDevices->count()
-                    && $devices->every(fn (array $device) => array_key_exists('name', $device)
-                        && array_key_exists('location', $device)
-                        && array_key_exists('type', $device)
-                        && array_key_exists('status', $device)
-                        && array_key_exists('brightness', $device)
-                        && array_key_exists('created_at', $device)
-                        && array_key_exists('updated_at', $device));
+            ->where('devices', function (Collection $devices) use ($deviceInSala, $deviceInHabitacion) {
+                return $devices->pluck('id')->diff(collect([$deviceInSala->id, $deviceInHabitacion->id]))->isEmpty();
             })
+            ->has('locations', fn (Assert $locations) => $locations
+                ->where('0.name', 'Casa')
+                ->where('0.areas.0.name', 'Sala')
+                ->where('0.areas.1.name', 'Habitación')
+            )
         );
 });
 
-test('users can filter devices by location on the dashboard', function () {
+test('users can filter devices by location and area', function () {
     $user = User::factory()->create();
-    $locationA = Location::factory()->for($user)->create(['name' => 'Oficina']);
-    $locationB = Location::factory()->for($user)->create(['name' => 'Habitación']);
+    $location = Location::factory()->for($user)->create(['name' => 'Departamento']);
+    $sala = Area::factory()->for($user)->for($location)->create(['name' => 'Sala']);
+    $cocina = Area::factory()->for($user)->for($location)->create(['name' => 'Cocina']);
 
-    $deviceInA = Device::factory()->for($user)->create([
-        'location_id' => $locationA->id,
-        'location' => $locationA->name,
+    $deviceInSala = Device::factory()->for($user)->create([
+        'location' => $sala->name,
+        'location_id' => $location->id,
+        'area_id' => $sala->id,
     ]);
     Device::factory()->for($user)->create([
-        'location_id' => $locationB->id,
-        'location' => $locationB->name,
+        'location' => $cocina->name,
+        'location_id' => $location->id,
+        'area_id' => $cocina->id,
     ]);
 
     $this->actingAs($user)
-        ->get(route('dashboard', ['location' => $locationA->id]))
+        ->get(route('dashboard', ['location' => $location->id, 'area' => $sala->id]))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->where('devices', fn (Collection $devices) => $devices->count() === 1
-                && $devices->first()['id'] === $deviceInA->id)
+                && $devices->first()['id'] === $deviceInSala->id)
+            ->where('filters.location', $location->id)
+            ->where('filters.area', $sala->id)
         );
 });

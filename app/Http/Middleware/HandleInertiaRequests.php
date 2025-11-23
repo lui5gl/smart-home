@@ -57,6 +57,9 @@ class HandleInertiaRequests extends Middleware
                         ? 'none'
                         : (is_numeric($request->query('location')) ? (int) $request->query('location') : null))
                     : null,
+                'area' => $request->routeIs('dashboard') && is_numeric($request->query('area'))
+                    ? (int) $request->query('area')
+                    : null,
             ],
         ];
     }

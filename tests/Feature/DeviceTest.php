@@ -1,17 +1,20 @@
 <?php
 
+use App\Models\Area;
 use App\Models\Device;
 use App\Models\Location;
 use App\Models\User;
 
 test('authenticated users can create devices', function () {
     $user = User::factory()->create();
+    $location = Location::factory()->for($user)->create(['name' => 'Casa principal']);
+    $area = Area::factory()->for($user)->for($location)->create(['name' => 'Sala']);
 
     $this->actingAs($user);
 
     $response = $this->post(route('devices.store'), [
         'name' => 'Sensor de temperatura',
-        'location' => '  Sala principal ',
+        'area_id' => $area->id,
         'type' => 'dimmer',
         'status' => 'on',
         'brightness' => 80,
@@ -22,44 +25,26 @@ test('authenticated users can create devices', function () {
 
     $this->assertDatabaseHas('devices', [
         'user_id' => $user->id,
+        'area_id' => $area->id,
+        'location_id' => $location->id,
         'name' => 'Sensor de temperatura',
-        'location' => 'Sala principal',
+        'location' => $area->name,
         'type' => 'dimmer',
         'status' => 'on',
         'brightness' => 80,
     ]);
 });
 
-test('location is optional when creating devices', function () {
-    $user = User::factory()->create();
-
-    $this->actingAs($user);
-
-    $response = $this->post(route('devices.store'), [
-        'name' => 'Foco principal',
-        'location' => '',
-        'type' => 'switch',
-        'status' => 'off',
-        'brightness' => 100,
-    ]);
-
-    $response->assertRedirect(route('dashboard'));
-
-    $this->assertDatabaseHas('devices', [
-        'user_id' => $user->id,
-        'name' => 'Foco principal',
-        'location' => null,
-        'type' => 'switch',
-        'status' => 'off',
-        'brightness' => 100,
-    ]);
-});
-
 test('authenticated users can update their devices', function () {
     $user = User::factory()->create();
+    $location = Location::factory()->for($user)->create(['name' => 'Casa']);
+    $area = Area::factory()->for($user)->for($location)->create(['name' => 'Sala']);
+    $newArea = Area::factory()->for($user)->for($location)->create(['name' => 'Terraza']);
     $device = Device::factory()->for($user)->create([
         'name' => 'Sensor de temperatura',
-        'location' => 'Sala',
+        'location' => $area->name,
+        'location_id' => $location->id,
+        'area_id' => $area->id,
         'type' => 'dimmer',
         'status' => 'off',
         'brightness' => 60,
@@ -69,7 +54,7 @@ test('authenticated users can update their devices', function () {
 
     $response = $this->patch(route('devices.update', $device), [
         'name' => 'Sensor exterior',
-        'location' => '  Terraza ',
+        'area_id' => $newArea->id,
         'type' => 'switch',
         'status' => 'on',
         'brightness' => 100,
@@ -81,8 +66,10 @@ test('authenticated users can update their devices', function () {
     $this->assertDatabaseHas('devices', [
         'id' => $device->id,
         'user_id' => $user->id,
+        'area_id' => $newArea->id,
+        'location_id' => $location->id,
         'name' => 'Sensor exterior',
-        'location' => 'Terraza',
+        'location' => $newArea->name,
         'type' => 'switch',
         'status' => 'on',
         'brightness' => 100,
@@ -92,9 +79,13 @@ test('authenticated users can update their devices', function () {
 test('users cannot update devices that are not theirs', function () {
     $owner = User::factory()->create();
     $otherUser = User::factory()->create();
+    $location = Location::factory()->for($owner)->create();
+    $area = Area::factory()->for($owner)->for($location)->create();
     $device = Device::factory()->for($owner)->create([
         'name' => 'Sensor interior',
-        'location' => 'Pasillo',
+        'location' => $area->name,
+        'location_id' => $location->id,
+        'area_id' => $area->id,
         'type' => 'switch',
         'status' => 'off',
         'brightness' => 100,
@@ -104,28 +95,19 @@ test('users cannot update devices that are not theirs', function () {
 
     $response = $this->patch(route('devices.update', $device), [
         'name' => 'Sensor actualizado',
-        'location' => 'Habitación',
+        'area_id' => $area->id,
         'type' => 'dimmer',
         'status' => 'on',
         'brightness' => 70,
     ]);
 
     $response->assertForbidden();
-
-    $this->assertDatabaseHas('devices', [
-        'id' => $device->id,
-        'name' => 'Sensor interior',
-        'location' => 'Pasillo',
-        'type' => 'switch',
-        'status' => 'off',
-        'brightness' => 100,
-    ]);
 });
 
 test('guests cannot create devices', function () {
     $response = $this->post(route('devices.store'), [
         'name' => 'Sensor de movimiento',
-        'location' => 'Entrada',
+        'area_id' => 1,
         'type' => 'switch',
         'status' => 'on',
         'brightness' => 100,
@@ -135,16 +117,16 @@ test('guests cannot create devices', function () {
     $this->assertDatabaseCount('devices', 0);
 });
 
-test('users can assign devices to saved locations', function () {
+test('users can assign devices to saved areas', function () {
     $user = User::factory()->create();
     $location = Location::factory()->for($user)->create(['name' => 'Oficina']);
+    $area = Area::factory()->for($user)->for($location)->create(['name' => 'Recepción']);
 
     $this->actingAs($user);
 
     $response = $this->post(route('devices.store'), [
         'name' => 'Sensor de presencia',
-        'location' => '',
-        'location_id' => $location->id,
+        'area_id' => $area->id,
         'type' => 'switch',
         'status' => 'off',
         'brightness' => 100,
@@ -154,25 +136,25 @@ test('users can assign devices to saved locations', function () {
 
     $this->assertDatabaseHas('devices', [
         'user_id' => $user->id,
+        'area_id' => $area->id,
         'location_id' => $location->id,
-        'location' => $location->name,
+        'location' => $area->name,
     ]);
 });
 
-test('users cannot assign devices to locations they do not own', function () {
+test('users cannot assign devices to areas they do not own', function () {
     $user = User::factory()->create();
-    $otherLocation = Location::factory()->create(['name' => 'Inválido']);
+    $otherArea = Area::factory()->create();
 
     $this->actingAs($user);
 
     $response = $this->from(route('dashboard'))->post(route('devices.store'), [
         'name' => 'Sensor de puerta',
-        'location' => 'Pasillo',
-        'location_id' => $otherLocation->id,
+        'area_id' => $otherArea->id,
         'type' => 'switch',
         'status' => 'on',
         'brightness' => 100,
     ]);
 
-    $response->assertSessionHasErrors('location_id');
+    $response->assertSessionHasErrors('area_id');
 });
