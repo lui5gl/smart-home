@@ -365,7 +365,7 @@ const handleAreaFilterChange = (value: number | null): void => {
 </script>
 
 <template>
-    <Head title="Dashboard" />
+    <Head title="Panel" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex flex-1 flex-col gap-8 p-6">
