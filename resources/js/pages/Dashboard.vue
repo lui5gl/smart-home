@@ -672,7 +672,6 @@ const handleAreaFilterChange = (value: number | null): void => {
                                             class="gap-2 shrink-0"
                                         >
                                             <IconDotsVertical class="size-4" />
-                                            Opciones
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" class="w-40">
