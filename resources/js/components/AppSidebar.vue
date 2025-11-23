@@ -151,7 +151,7 @@ const handleLocationStored = (): void => {
                 <div class="space-y-1">
                     <button
                         type="button"
-                        class="w-full truncate whitespace-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted"
+                        class="w-full truncate whitespace-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:bg-sidebar-accent/80 dark:hover:text-sidebar-accent-foreground"
                         :class="isActiveLocation(null) ? 'bg-primary text-primary-foreground' : ''"
                         @click="applyLocationFilter(null)"
                     >
@@ -162,7 +162,7 @@ const handleLocationStored = (): void => {
                             v-for="location in sidebarLocations"
                             :key="location.id"
                             type="button"
-                        class="w-full truncate whitespace-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition hover:bg-muted"
+                            class="w-full truncate whitespace-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground dark:hover:bg-sidebar-accent/80 dark:hover:text-sidebar-accent-foreground"
                             :class="isActiveLocation(location.id) ? 'bg-primary text-primary-foreground' : ''"
                             @click="applyLocationFilter(location.id)"
                         >
