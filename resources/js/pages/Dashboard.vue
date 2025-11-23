@@ -359,7 +359,7 @@ const deviceFormDefinition = computed(() => {
                                     class="grid gap-2"
                                 >
                                     <div class="flex items-center justify-between">
-                                        <Label for="device-brightness">Nivel de brillo</Label>
+                                        <Label for="device-brightness">Nivel de potencia</Label>
                                         <span class="text-sm text-muted-foreground"
                                             >{{ deviceBrightnessLabel }}%</span
                                         >
@@ -458,7 +458,7 @@ const deviceFormDefinition = computed(() => {
                             class="space-y-3 rounded-lg border border-border/60 p-3 text-foreground"
                         >
                             <div class="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground/80">
-                                <span>Nivel de brillo</span>
+                                <span>Nivel de potencia</span>
                                 <span class="text-base font-semibold text-foreground">
                                     {{ currentDeviceBrightness(device) }}%
                                 </span>
