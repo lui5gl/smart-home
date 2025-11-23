@@ -16,8 +16,8 @@ test('authenticated users can view their devices on the dashboard', function () 
         ->count(2)
         ->for($user)
         ->sequence(
-            ['name' => 'Sensor de temperatura', 'type' => 'dimmer'],
-            ['name' => 'Foco principal', 'type' => 'switch']
+            ['name' => 'Sensor de temperatura', 'type' => 'dimmer', 'status' => 'on'],
+            ['name' => 'Foco principal', 'type' => 'switch', 'status' => 'off']
         )
         ->create();
 

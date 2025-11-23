@@ -22,6 +22,7 @@ class DeviceFactory extends Factory
             'name' => fake()->words(2, true),
             'location' => fake()->optional()->city(),
             'type' => fake()->randomElement(['switch', 'dimmer']),
+            'status' => fake()->randomElement(['on', 'off']),
         ];
     }
 }

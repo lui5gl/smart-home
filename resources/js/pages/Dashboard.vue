@@ -10,17 +10,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Form, Head } from '@inertiajs/vue3';
+import { Spinner } from '@/components/ui/spinner';
+import { Form, Head, router } from '@inertiajs/vue3';
 import { IconBulb, IconMapPin, IconPencil, IconPlus } from '@tabler/icons-vue';
-import { computed, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 
 type DeviceType = 'switch' | 'dimmer';
+type DeviceStatus = 'on' | 'off';
 
 interface DeviceItem {
     id: number;
     name: string;
     location: string | null;
     type: DeviceType;
+    status: DeviceStatus;
     created_at: string | null;
     updated_at: string | null;
 }
@@ -48,21 +51,30 @@ const deviceName = ref('');
 const deviceLocation = ref('');
 const defaultDeviceType: DeviceType = 'switch';
 const deviceType = ref<DeviceType>(defaultDeviceType);
+const defaultDeviceStatus: DeviceStatus = 'off';
+const deviceStatus = ref<DeviceStatus>(defaultDeviceStatus);
 const isEditingDevice = computed(() => deviceDialogMode.value === 'edit');
 
 const deviceTypeLabels: Record<DeviceType, string> = {
     switch: 'Encendido / Apagado',
     dimmer: 'Regulable',
 };
+const statusLabels: Record<DeviceStatus, string> = {
+    on: 'Encendido',
+    off: 'Apagado',
+};
 
 const dateFormatter = new Intl.DateTimeFormat('es-MX', {
     dateStyle: 'medium',
 });
 
+const statusUpdating = reactive<Record<number, boolean>>({});
+
 const resetDeviceForm = (): void => {
     deviceName.value = '';
     deviceLocation.value = '';
     deviceType.value = defaultDeviceType;
+    deviceStatus.value = defaultDeviceStatus;
 };
 
 const openCreateDialog = (): void => {
@@ -78,6 +90,7 @@ const openEditDialog = (device: DeviceItem): void => {
     deviceName.value = device.name;
     deviceLocation.value = device.location ?? '';
     deviceType.value = device.type;
+    deviceStatus.value = device.status;
     isDeviceDialogOpen.value = true;
 };
 
@@ -111,6 +124,30 @@ const handleDeviceSaved = (): void => {
     deviceDialogMode.value = 'create';
     isDeviceDialogOpen.value = false;
 };
+
+const setStatusUpdating = (deviceId: number, value: boolean): void => {
+    statusUpdating[deviceId] = value;
+};
+
+const handleStatusToggle = (device: DeviceItem): void => {
+    const nextStatus: DeviceStatus = device.status === 'on' ? 'off' : 'on';
+    setStatusUpdating(device.id, true);
+
+    router.patch(DeviceController.update.url({ device: device.id }), {
+        name: device.name,
+        location: device.location ?? '',
+        type: device.type,
+        status: nextStatus,
+    }, {
+        preserveScroll: true,
+        onFinish: () => {
+            setStatusUpdating(device.id, false);
+        },
+    });
+};
+
+const statusButtonLabel = (device: DeviceItem): string =>
+    device.status === 'on' ? 'Apagar' : 'Encender';
 
 const dialogTitle = computed(() =>
     isEditingDevice.value ? 'Editar dispositivo' : 'Agregar dispositivo'
@@ -221,6 +258,19 @@ const deviceFormDefinition = computed(() => {
                                     </select>
                                     <InputError :message="errors.type" />
                                 </div>
+                                <div class="grid gap-2">
+                                    <Label for="device-status">Estado</Label>
+                                    <select
+                                        id="device-status"
+                                        v-model="deviceStatus"
+                                        name="status"
+                                        class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm"
+                                    >
+                                        <option value="on">Encendido</option>
+                                        <option value="off">Apagado</option>
+                                    </select>
+                                    <InputError :message="errors.status" />
+                                </div>
                             </div>
 
                             <DialogFooter class="gap-2">
@@ -243,10 +293,15 @@ const deviceFormDefinition = computed(() => {
                             <CardTitle class="text-lg font-semibold">{{ device.name }}</CardTitle>
                         </div>
                         <div class="flex items-center gap-2">
-                            <Badge variant="secondary">
-                                <IconBulb class="size-3.5" />
-                                {{ deviceTypeLabels[device.type] }}
-                            </Badge>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <Badge variant="secondary">
+                                    <IconBulb class="size-3.5" />
+                                    {{ deviceTypeLabels[device.type] }}
+                                </Badge>
+                                <Badge :variant="device.status === 'on' ? 'default' : 'outline'">
+                                    {{ statusLabels[device.status] }}
+                                </Badge>
+                            </div>
                             <Button
                                 type="button"
                                 size="sm"
@@ -264,10 +319,25 @@ const deviceFormDefinition = computed(() => {
                             <IconMapPin class="size-4 text-foreground/70" />
                             <span>{{ locationLabel(device.location) }}</span>
                         </p>
-                        <p class="flex items-center gap-2">
-                            <IconBulb class="size-4 text-foreground/70" />
-                            <span>{{ deviceTypeLabels[device.type] }}</span>
-                        </p>
+                        <div
+                            class="flex flex-col gap-3 rounded-lg border border-border/60 p-3 text-foreground/80 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                            <div class="flex items-center gap-2">
+                                <IconBulb class="size-4 text-foreground/70" />
+                                <span>{{ statusLabels[device.status] }}</span>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                class="w-full sm:w-auto"
+                                :disabled="statusUpdating[device.id]"
+                                @click="handleStatusToggle(device)"
+                            >
+                                <Spinner v-if="statusUpdating[device.id]" class="size-4" />
+                                <span v-else>{{ statusButtonLabel(device) }}</span>
+                            </Button>
+                        </div>
                     </CardContent>
                 </Card>
             </div>

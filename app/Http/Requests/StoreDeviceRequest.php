@@ -40,6 +40,7 @@ class StoreDeviceRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'location' => ['nullable', 'string', 'max:255'],
             'type' => ['required', Rule::in(['switch', 'dimmer'])],
+            'status' => ['required', Rule::in(['on', 'off'])],
         ];
     }
 }

@@ -19,6 +19,7 @@ class Device extends Model
         'name',
         'location',
         'type',
+        'status',
     ];
 
     public function user(): BelongsTo

@@ -23,6 +23,7 @@ Route::get('dashboard', function (Request $request) {
             'name' => $device->name,
             'location' => $device->location,
             'type' => $device->type,
+            'status' => $device->status,
             'created_at' => $device->created_at?->toIso8601String(),
             'updated_at' => $device->updated_at?->toIso8601String(),
         ]);

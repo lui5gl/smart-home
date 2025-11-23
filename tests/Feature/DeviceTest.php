@@ -12,6 +12,7 @@ test('authenticated users can create devices', function () {
         'name' => 'Sensor de temperatura',
         'location' => '  Sala principal ',
         'type' => 'dimmer',
+        'status' => 'on',
     ]);
 
     $response->assertRedirect(route('dashboard'));
@@ -22,6 +23,7 @@ test('authenticated users can create devices', function () {
         'name' => 'Sensor de temperatura',
         'location' => 'Sala principal',
         'type' => 'dimmer',
+        'status' => 'on',
     ]);
 });
 
@@ -34,6 +36,7 @@ test('location is optional when creating devices', function () {
         'name' => 'Foco principal',
         'location' => '',
         'type' => 'switch',
+        'status' => 'off',
     ]);
 
     $response->assertRedirect(route('dashboard'));
@@ -43,6 +46,7 @@ test('location is optional when creating devices', function () {
         'name' => 'Foco principal',
         'location' => null,
         'type' => 'switch',
+        'status' => 'off',
     ]);
 });
 
@@ -52,6 +56,7 @@ test('authenticated users can update their devices', function () {
         'name' => 'Sensor de temperatura',
         'location' => 'Sala',
         'type' => 'dimmer',
+        'status' => 'off',
     ]);
 
     $this->actingAs($user);
@@ -60,6 +65,7 @@ test('authenticated users can update their devices', function () {
         'name' => 'Sensor exterior',
         'location' => '  Terraza ',
         'type' => 'switch',
+        'status' => 'on',
     ]);
 
     $response->assertRedirect(route('dashboard'));
@@ -71,6 +77,7 @@ test('authenticated users can update their devices', function () {
         'name' => 'Sensor exterior',
         'location' => 'Terraza',
         'type' => 'switch',
+        'status' => 'on',
     ]);
 });
 
@@ -81,6 +88,7 @@ test('users cannot update devices that are not theirs', function () {
         'name' => 'Sensor interior',
         'location' => 'Pasillo',
         'type' => 'switch',
+        'status' => 'off',
     ]);
 
     $this->actingAs($otherUser);
@@ -89,6 +97,7 @@ test('users cannot update devices that are not theirs', function () {
         'name' => 'Sensor actualizado',
         'location' => 'Habitación',
         'type' => 'dimmer',
+        'status' => 'on',
     ]);
 
     $response->assertForbidden();
@@ -98,6 +107,7 @@ test('users cannot update devices that are not theirs', function () {
         'name' => 'Sensor interior',
         'location' => 'Pasillo',
         'type' => 'switch',
+        'status' => 'off',
     ]);
 });
 
@@ -106,6 +116,7 @@ test('guests cannot create devices', function () {
         'name' => 'Sensor de movimiento',
         'location' => 'Entrada',
         'type' => 'switch',
+        'status' => 'on',
     ]);
 
     $response->assertRedirect(route('login'));
