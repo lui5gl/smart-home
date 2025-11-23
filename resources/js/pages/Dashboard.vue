@@ -14,7 +14,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Form, Head, router } from '@inertiajs/vue3';
-import { IconBulb, IconDotsVertical, IconMapPin, IconPencil, IconPlus, IconTrash } from '@tabler/icons-vue';
+import {
+    IconBulb,
+    IconDotsVertical,
+    IconMapPin,
+    IconPencil,
+    IconPlus,
+    IconPower,
+    IconSun,
+    IconTrash,
+} from '@tabler/icons-vue';
 import { computed, reactive, ref, watch } from 'vue';
 
 type DeviceType = 'switch' | 'dimmer';
@@ -712,7 +721,10 @@ const handleAreaFilterChange = (value: number | null): void => {
                                     @click="handleStatusToggle(device)"
                                 >
                                     <Spinner v-if="statusUpdating[device.id]" class="size-4" />
-                                    <span v-else>{{ statusButtonLabel(device) }}</span>
+                                    <template v-else>
+                                        <IconPower class="size-4" />
+                                        <span>{{ statusButtonLabel(device) }}</span>
+                                    </template>
                                 </Button>
                             </div>
                             <div
@@ -720,7 +732,10 @@ const handleAreaFilterChange = (value: number | null): void => {
                                 class="space-y-3 rounded-lg border border-border/60 p-3 text-foreground"
                             >
                                 <div class="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground/80">
-                                    <span>Nivel de potencia</span>
+                                    <span class="inline-flex items-center gap-1 text-muted-foreground">
+                                        <IconSun class="size-4" />
+                                        Nivel de potencia
+                                    </span>
                                     <span class="text-base font-semibold text-foreground">
                                         {{ currentDeviceBrightness(device) }}%
                                     </span>
