@@ -24,6 +24,7 @@ interface DeviceItem {
     location: string | null;
     type: DeviceType;
     status: DeviceStatus;
+    brightness: number;
     created_at: string | null;
     updated_at: string | null;
 }
@@ -50,10 +51,14 @@ const editingDevice = ref<DeviceItem | null>(null);
 const deviceName = ref('');
 const deviceLocation = ref('');
 const defaultDeviceType: DeviceType = 'switch';
+const defaultSwitchBrightness = 100;
+const defaultDimmerBrightness = 50;
 const deviceType = ref<DeviceType>(defaultDeviceType);
 const defaultDeviceStatus: DeviceStatus = 'off';
 const deviceStatus = ref<DeviceStatus>(defaultDeviceStatus);
+const deviceBrightness = ref<number>(defaultSwitchBrightness);
 const isEditingDevice = computed(() => deviceDialogMode.value === 'edit');
+const showBrightnessControl = computed(() => deviceType.value === 'dimmer');
 
 const deviceTypeLabels: Record<DeviceType, string> = {
     switch: 'Interruptor',
@@ -69,12 +74,15 @@ const dateFormatter = new Intl.DateTimeFormat('es-MX', {
 });
 
 const statusUpdating = reactive<Record<number, boolean>>({});
+const brightnessUpdating = reactive<Record<number, boolean>>({});
+const brightnessPreview = reactive<Record<number, number | undefined>>({});
 
 const resetDeviceForm = (): void => {
     deviceName.value = '';
     deviceLocation.value = '';
     deviceType.value = defaultDeviceType;
     deviceStatus.value = defaultDeviceStatus;
+    deviceBrightness.value = defaultSwitchBrightness;
 };
 
 const openCreateDialog = (): void => {
@@ -91,6 +99,7 @@ const openEditDialog = (device: DeviceItem): void => {
     deviceLocation.value = device.location ?? '';
     deviceType.value = device.type;
     deviceStatus.value = device.status;
+    deviceBrightness.value = device.brightness;
     isDeviceDialogOpen.value = true;
 };
 
@@ -125,8 +134,34 @@ const handleDeviceSaved = (): void => {
     isDeviceDialogOpen.value = false;
 };
 
+watch(deviceType, (current, previous) => {
+    if (current === 'switch') {
+        deviceBrightness.value = defaultSwitchBrightness;
+
+        return;
+    }
+
+    if (current === 'dimmer' && previous === 'switch') {
+        deviceBrightness.value = defaultDimmerBrightness;
+    }
+});
+
 const setStatusUpdating = (deviceId: number, value: boolean): void => {
     statusUpdating[deviceId] = value;
+};
+
+const currentDeviceBrightness = (device: DeviceItem): number => {
+    const preview = brightnessPreview[device.id];
+
+    if (preview !== undefined) {
+        return preview;
+    }
+
+    if (typeof device.brightness === 'number') {
+        return device.brightness;
+    }
+
+    return device.type === 'dimmer' ? defaultDimmerBrightness : defaultSwitchBrightness;
 };
 
 const handleStatusToggle = (device: DeviceItem): void => {
@@ -138,6 +173,7 @@ const handleStatusToggle = (device: DeviceItem): void => {
         location: device.location ?? '',
         type: device.type,
         status: nextStatus,
+        brightness: currentDeviceBrightness(device),
     }, {
         preserveScroll: true,
         onFinish: () => {
@@ -148,6 +184,53 @@ const handleStatusToggle = (device: DeviceItem): void => {
 
 const statusButtonLabel = (device: DeviceItem): string =>
     device.status === 'on' ? 'Apagar' : 'Encender';
+
+const deviceBrightnessLabel = computed(() => {
+    if (showBrightnessControl.value) {
+        return deviceBrightness.value ?? defaultDimmerBrightness;
+    }
+
+    return defaultSwitchBrightness;
+});
+
+const setBrightnessUpdating = (deviceId: number, value: boolean): void => {
+    brightnessUpdating[deviceId] = value;
+};
+
+const handleBrightnessInput = (device: DeviceItem, value: string | number): void => {
+    const parsed = Number(value);
+
+    if (Number.isNaN(parsed)) {
+        return;
+    }
+
+    brightnessPreview[device.id] = parsed;
+};
+
+const handleBrightnessChange = (device: DeviceItem, value: string | number): void => {
+    const parsed = Number(value);
+
+    if (Number.isNaN(parsed)) {
+        return;
+    }
+
+    brightnessPreview[device.id] = parsed;
+    setBrightnessUpdating(device.id, true);
+
+    router.patch(DeviceController.update.url({ device: device.id }), {
+        name: device.name,
+        location: device.location ?? '',
+        type: device.type,
+        status: device.status,
+        brightness: parsed,
+    }, {
+        preserveScroll: true,
+        onFinish: () => {
+            setBrightnessUpdating(device.id, false);
+            delete brightnessPreview[device.id];
+        },
+    });
+};
 
 const dialogTitle = computed(() =>
     isEditingDevice.value ? 'Editar dispositivo' : 'Agregar dispositivo'
@@ -271,6 +354,39 @@ const deviceFormDefinition = computed(() => {
                                     </select>
                                     <InputError :message="errors.status" />
                                 </div>
+                                <div
+                                    v-if="showBrightnessControl"
+                                    class="grid gap-2"
+                                >
+                                    <div class="flex items-center justify-between">
+                                        <Label for="device-brightness">Nivel de brillo</Label>
+                                        <span class="text-sm text-muted-foreground"
+                                            >{{ deviceBrightnessLabel }}%</span
+                                        >
+                                    </div>
+                                    <input
+                                        id="device-brightness"
+                                        v-model.number="deviceBrightness"
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        step="5"
+                                        name="brightness"
+                                        class="accent-primary h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary"
+                                    />
+                                    <div class="flex justify-between text-xs text-muted-foreground">
+                                        <span>0%</span>
+                                        <span>50%</span>
+                                        <span>100%</span>
+                                    </div>
+                                    <InputError :message="errors.brightness" />
+                                </div>
+                                <input
+                                    v-else
+                                    type="hidden"
+                                    name="brightness"
+                                    :value="deviceBrightness"
+                                />
                             </div>
 
                             <DialogFooter class="gap-2">
@@ -336,6 +452,35 @@ const deviceFormDefinition = computed(() => {
                                 <Spinner v-if="statusUpdating[device.id]" class="size-4" />
                                 <span v-else>{{ statusButtonLabel(device) }}</span>
                             </Button>
+                        </div>
+                        <div
+                            v-if="device.type === 'dimmer'"
+                            class="space-y-3 rounded-lg border border-border/60 p-3 text-foreground"
+                        >
+                            <div class="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground/80">
+                                <span>Nivel de brillo</span>
+                                <span class="text-base font-semibold text-foreground">
+                                    {{ currentDeviceBrightness(device) }}%
+                                </span>
+                            </div>
+                            <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                step="5"
+                                :value="currentDeviceBrightness(device)"
+                                class="accent-primary h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary disabled:cursor-not-allowed"
+                                :disabled="brightnessUpdating[device.id]"
+                                @input="handleBrightnessInput(device, $event.target.value)"
+                                @change="handleBrightnessChange(device, $event.target.value)"
+                            />
+                            <div class="flex items-center justify-between text-xs text-muted-foreground">
+                                <span>Apagado</span>
+                                <span>Máximo</span>
+                            </div>
+                            <p v-if="brightnessUpdating[device.id]" class="text-xs text-muted-foreground">
+                                Actualizando brillo...
+                            </p>
                         </div>
                     </CardContent>
                 </Card>

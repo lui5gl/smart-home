@@ -16,8 +16,8 @@ test('authenticated users can view their devices on the dashboard', function () 
         ->count(2)
         ->for($user)
         ->sequence(
-            ['name' => 'Sensor de temperatura', 'type' => 'dimmer', 'status' => 'on'],
-            ['name' => 'Foco principal', 'type' => 'switch', 'status' => 'off']
+            ['name' => 'Sensor de temperatura', 'type' => 'dimmer', 'status' => 'on', 'brightness' => 70],
+            ['name' => 'Foco principal', 'type' => 'switch', 'status' => 'off', 'brightness' => 100]
         )
         ->create();
 
@@ -34,6 +34,8 @@ test('authenticated users can view their devices on the dashboard', function () 
                     && $devices->every(fn (array $device) => array_key_exists('name', $device)
                         && array_key_exists('location', $device)
                         && array_key_exists('type', $device)
+                        && array_key_exists('status', $device)
+                        && array_key_exists('brightness', $device)
                         && array_key_exists('created_at', $device)
                         && array_key_exists('updated_at', $device));
             })

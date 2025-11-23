@@ -20,6 +20,7 @@ class Device extends Model
         'location',
         'type',
         'status',
+        'brightness',
     ];
 
     public function user(): BelongsTo

@@ -17,12 +17,17 @@ class DeviceFactory extends Factory
      */
     public function definition(): array
     {
+        $type = fake()->randomElement(['switch', 'dimmer']);
+
         return [
             'user_id' => User::factory(),
             'name' => fake()->words(2, true),
             'location' => fake()->optional()->city(),
-            'type' => fake()->randomElement(['switch', 'dimmer']),
+            'type' => $type,
             'status' => fake()->randomElement(['on', 'off']),
+            'brightness' => $type === 'dimmer'
+                ? fake()->numberBetween(0, 100)
+                : 100,
         ];
     }
 }
