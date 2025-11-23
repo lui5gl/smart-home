@@ -25,7 +25,7 @@ import {
     IconSun,
     IconTrash,
 } from '@tabler/icons-vue';
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 
 type DeviceType = 'switch' | 'dimmer';
 type DeviceStatus = 'on' | 'off';
@@ -128,6 +128,7 @@ const brightnessPreview = reactive<Record<number, number | undefined>>({});
 const isAreaDialogOpen = ref(false);
 const newAreaName = ref('');
 const newAreaLocationId = ref<number | ''>('');
+const copyButton = ref<HTMLButtonElement | null>(null);
 
 const areasForFilter = computed(() => areaOptions.value);
 
@@ -342,7 +343,13 @@ const copyWebhookUrl = async (): Promise<void> => {
 watch(isAdvancedDialogOpen, (isOpen) => {
     if (!isOpen) {
         advancedDevice.value = null;
+
+        return;
     }
+
+    nextTick(() => {
+        copyButton.value?.focus();
+    });
 });
 
 
@@ -809,6 +816,7 @@ const handleAreaFilterChange = (value: number | null): void => {
                                 variant="outline"
                                 class="w-full sm:w-auto"
                                 @click="copyWebhookUrl"
+                                ref="copyButton"
                             >
                                 <IconCopy class="size-4" />
                                 Copiar
