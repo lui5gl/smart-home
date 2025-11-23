@@ -6,7 +6,7 @@ import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -56,7 +56,7 @@ const deviceStatus = ref<DeviceStatus>(defaultDeviceStatus);
 const isEditingDevice = computed(() => deviceDialogMode.value === 'edit');
 
 const deviceTypeLabels: Record<DeviceType, string> = {
-    switch: 'Encendido / Apagado',
+    switch: 'Interruptor',
     dimmer: 'Regulable',
 };
 const statusLabels: Record<DeviceStatus, string> = {
@@ -288,20 +288,19 @@ const deviceFormDefinition = computed(() => {
 
             <div v-if="hasDevices" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <Card v-for="device in devices" :key="device.id" class="border-border/70">
-                    <CardHeader class="flex flex-row items-start justify-between gap-4">
-                        <div>
+                    <CardHeader class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div class="space-y-1">
                             <CardTitle class="text-lg font-semibold">{{ device.name }}</CardTitle>
+                            <CardDescription class="flex items-center gap-2 text-sm">
+                                <IconMapPin class="size-4 text-foreground/70" />
+                                <span>{{ locationLabel(device.location) }}</span>
+                            </CardDescription>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <Badge variant="secondary">
-                                    <IconBulb class="size-3.5" />
-                                    {{ deviceTypeLabels[device.type] }}
-                                </Badge>
-                                <Badge :variant="device.status === 'on' ? 'default' : 'outline'">
-                                    {{ statusLabels[device.status] }}
-                                </Badge>
-                            </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <Badge variant="secondary">
+                                <IconBulb class="size-3.5" />
+                                {{ deviceTypeLabels[device.type] }}
+                            </Badge>
                             <Button
                                 type="button"
                                 size="sm"
@@ -314,21 +313,21 @@ const deviceFormDefinition = computed(() => {
                             </Button>
                         </div>
                     </CardHeader>
-                    <CardContent class="space-y-3 text-sm text-muted-foreground">
-                        <p class="flex items-center gap-2">
-                            <IconMapPin class="size-4 text-foreground/70" />
-                            <span>{{ locationLabel(device.location) }}</span>
-                        </p>
+                    <CardContent class="space-y-4 text-sm text-muted-foreground">
                         <div
                             class="flex flex-col gap-3 rounded-lg border border-border/60 p-3 text-foreground/80 sm:flex-row sm:items-center sm:justify-between"
                         >
-                            <div class="flex items-center gap-2">
-                                <IconBulb class="size-4 text-foreground/70" />
-                                <span>{{ statusLabels[device.status] }}</span>
+                            <div class="flex flex-col">
+                                <span class="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                    Estado actual
+                                </span>
+                                <span class="text-base font-medium text-foreground">
+                                    {{ statusLabels[device.status] }}
+                                </span>
                             </div>
                             <Button
                                 type="button"
-                                variant="outline"
+                                :variant="device.status === 'on' ? 'outline' : 'default'"
                                 size="sm"
                                 class="w-full sm:w-auto"
                                 :disabled="statusUpdating[device.id]"
