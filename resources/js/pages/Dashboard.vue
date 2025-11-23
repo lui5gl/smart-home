@@ -388,27 +388,36 @@ const deviceFormDefinition = computed(() => {
                                         <InputError :message="errors.type" />
                                     </div>
 
-                                    <div class="grid gap-2">
-                                        <Label for="device-status">Estado</Label>
-                                        <select
-                                            id="device-status"
-                                            v-model="deviceStatus"
-                                            name="status"
-                                            class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid-border-destructive flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm"
-                                        >
-                                            <option value="on">Encendido</option>
-                                            <option value="off">Apagado</option>
-                                        </select>
-                                        <InputError :message="errors.status" />
-                                    </div>
-
-                                    <div
-                                        v-if="showBrightnessControl"
-                                        class="grid gap-2"
+                                <div
+                                    v-if="deviceDialogMode === 'create'"
+                                    class="grid gap-2"
+                                >
+                                    <Label for="device-status">Estado</Label>
+                                    <select
+                                        id="device-status"
+                                        v-model="deviceStatus"
+                                        name="status"
+                                        class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid-border-destructive flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm"
                                     >
-                                        <div class="flex items-center justify-between">
-                                            <Label for="device-brightness">Nivel de potencia</Label>
-                                            <span class="text-sm text-muted-foreground"
+                                        <option value="on">Encendido</option>
+                                        <option value="off">Apagado</option>
+                                    </select>
+                                    <InputError :message="errors.status" />
+                                </div>
+                                <input
+                                    v-else
+                                    type="hidden"
+                                    name="status"
+                                    :value="deviceStatus"
+                                />
+
+                                <div
+                                    v-if="showBrightnessControl && deviceDialogMode === 'create'"
+                                    class="grid gap-2"
+                                >
+                                    <div class="flex items-center justify-between">
+                                        <Label for="device-brightness">Nivel de potencia</Label>
+                                        <span class="text-sm text-muted-foreground"
                                                 >{{ deviceBrightnessLabel }}%</span
                                             >
                                         </div>
