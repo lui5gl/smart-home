@@ -367,8 +367,8 @@ const handleAreaFilterChange = (value: number | null): void => {
 
                     <div class="flex flex-wrap gap-2 sm:justify-end">
                         <Dialog :open="isAreaDialogOpen" @update:open="isAreaDialogOpen = $event">
-                            <DialogTrigger as-child>
-                                <Button variant="outline" class="sm:w-auto" @click="isAreaDialogOpen = true">
+                        <DialogTrigger as-child>
+                            <Button size="lg" variant="outline" class="h-10 px-6 gap-2 sm:w-auto" @click="isAreaDialogOpen = true">
                                     <IconPlus class="size-4" />
                                     Nueva área
                                 </Button>
@@ -433,8 +433,8 @@ const handleAreaFilterChange = (value: number | null): void => {
                         </Dialog>
 
                         <Dialog :open="isDeviceDialogOpen" @update:open="isDeviceDialogOpen = $event">
-                            <DialogTrigger as-child>
-                                <Button size="lg" class="sm:w-auto" @click="openCreateDialog">
+                        <DialogTrigger as-child>
+                            <Button size="lg" class="h-10 px-6 gap-2 sm:w-auto" @click="openCreateDialog">
                                     <IconPlus class="size-4" />
                                     Agregar dispositivo
                                 </Button>
