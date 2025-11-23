@@ -9,11 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Form, Head, router } from '@inertiajs/vue3';
-import { IconBulb, IconMapPin, IconPencil, IconPlus } from '@tabler/icons-vue';
+import { IconBulb, IconDotsVertical, IconMapPin, IconPencil, IconPlus, IconTrash } from '@tabler/icons-vue';
 import { computed, reactive, ref, watch } from 'vue';
 
 type DeviceType = 'switch' | 'dimmer';
@@ -662,25 +663,33 @@ const handleAreaFilterChange = (value: number | null): void => {
                                     <IconBulb class="size-3.5" />
                                     {{ deviceTypeLabels[device.type] }}
                                 </Badge>
-                                <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="sm"
-                                    class="shrink-0"
-                                    @click="prepareHideDevice(device)"
-                                >
-                                    Eliminar
-                                </Button>
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    class="shrink-0"
-                                    @click="openEditDialog(device)"
-                                >
-                                    <IconPencil class="size-4" />
-                                    Editar
-                                </Button>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger :as-child="true">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            class="gap-2 shrink-0"
+                                        >
+                                            <IconDotsVertical class="size-4" />
+                                            Opciones
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" class="w-40">
+                                        <DropdownMenuItem @click="openEditDialog(device)">
+                                            <IconPencil class="size-4" />
+                                            Editar
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            variant="destructive"
+                                            class="rounded-sm bg-destructive px-2 py-2 text-white shadow-sm hover:bg-destructive/90 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-1 focus-visible:ring-offset-background data-[highlighted]:bg-destructive data-[highlighted]:text-white dark:bg-destructive dark:text-white dark:hover:bg-destructive/85 dark:data-[highlighted]:bg-destructive"
+                                            @click="prepareHideDevice(device)"
+                                        >
+                                            <IconTrash class="size-4" />
+                                            Eliminar
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
                         </CardHeader>
                         <CardContent class="space-y-4 text-sm text-muted-foreground">
@@ -778,7 +787,12 @@ const handleAreaFilterChange = (value: number | null): void => {
                     <DialogClose as-child>
                         <Button type="button" variant="secondary" @click="closeHideDialog">Cancelar</Button>
                     </DialogClose>
-                    <Button type="button" :disabled="!isHideConfirmationValid" @click="confirmHideDevice">
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        :disabled="!isHideConfirmationValid"
+                        @click="confirmHideDevice"
+                    >
                         Eliminar dispositivo
                     </Button>
                 </DialogFooter>
