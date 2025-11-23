@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { Form, Head, router } from '@inertiajs/vue3';
 import {
+    IconBulb,
     IconCopy,
     IconDotsVertical,
     IconMapPin,
