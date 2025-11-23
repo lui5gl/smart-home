@@ -783,7 +783,7 @@ const handleAreaFilterChange = (value: number | null): void => {
                         autocomplete="off"
                     />
                 </div>
-                <DialogFooter class="gap-2 w-full flex justify-between">
+                <DialogFooter class="flex w-full justify-end gap-2">
                     <DialogClose as-child>
                         <Button type="button" variant="secondary" @click="closeHideDialog">Cancelar</Button>
                     </DialogClose>
