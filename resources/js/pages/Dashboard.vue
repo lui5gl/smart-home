@@ -4,13 +4,31 @@ import InputError from '@/components/InputError.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form, Head } from '@inertiajs/vue3';
-import { IconPlus } from '@tabler/icons-vue';
-import { ref, watch } from 'vue';
+import { IconBulb, IconMapPin, IconPlus } from '@tabler/icons-vue';
+import { computed, ref, watch } from 'vue';
+
+type DeviceType = 'switch' | 'dimmer';
+
+interface DeviceItem {
+    id: number;
+    name: string;
+    location: string | null;
+    type: DeviceType;
+    created_at: string | null;
+}
+
+interface Props {
+    devices: DeviceItem[];
+}
+
+const props = defineProps<Props>();
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -19,12 +37,23 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+const devices = computed(() => props.devices);
+const hasDevices = computed(() => devices.value.length > 0);
+
 const isAddDeviceOpen = ref(false);
 const deviceName = ref('');
 const deviceLocation = ref('');
-type DeviceType = 'switch' | 'dimmer';
 const defaultDeviceType: DeviceType = 'switch';
 const deviceType = ref<DeviceType>(defaultDeviceType);
+
+const deviceTypeLabels: Record<DeviceType, string> = {
+    switch: 'Encendido / Apagado',
+    dimmer: 'Regulable',
+};
+
+const addedAtFormatter = new Intl.DateTimeFormat('es-MX', {
+    dateStyle: 'medium',
+});
 
 const resetDeviceForm = (): void => {
     deviceName.value = '';
@@ -38,7 +67,24 @@ watch(isAddDeviceOpen, (isOpen) => {
     }
 });
 
+const formatAddedAt = (timestamp: string | null): string => {
+    if (!timestamp) {
+        return 'Fecha desconocida';
+    }
+
+    return addedAtFormatter.format(new Date(timestamp));
+};
+
+const locationLabel = (location: string | null): string => {
+    if (!location) {
+        return 'Sin ubicación asignada';
+    }
+
+    return location;
+};
+
 const handleDeviceStored = (): void => {
+    resetDeviceForm();
     isAddDeviceOpen.value = false;
 };
 </script>
@@ -47,8 +93,15 @@ const handleDeviceStored = (): void => {
     <Head title="Dashboard" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-1 flex-col gap-4 p-6">
-            <div class="flex justify-end">
+        <div class="flex flex-1 flex-col gap-8 p-6">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-semibold leading-tight">Tus dispositivos</h1>
+                    <p class="text-sm text-muted-foreground">
+                        Consulta y administra los dispositivos inteligentes de tu hogar.
+                    </p>
+                </div>
+
                 <Dialog :open="isAddDeviceOpen" @update:open="isAddDeviceOpen = $event">
                     <DialogTrigger as-child>
                         <Button size="lg">
@@ -121,6 +174,48 @@ const handleDeviceStored = (): void => {
                         </Form>
                     </DialogContent>
                 </Dialog>
+            </div>
+
+            <div v-if="hasDevices" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <Card v-for="device in devices" :key="device.id" class="border-border/70">
+                    <CardHeader class="flex flex-row items-start justify-between gap-4">
+                        <div>
+                            <CardTitle class="text-lg font-semibold">{{ device.name }}</CardTitle>
+                            <CardDescription>Agregado el {{ formatAddedAt(device.created_at) }}</CardDescription>
+                        </div>
+                        <Badge variant="secondary">
+                            <IconBulb class="size-3.5" />
+                            {{ deviceTypeLabels[device.type] }}
+                        </Badge>
+                    </CardHeader>
+                    <CardContent class="space-y-3 text-sm text-muted-foreground">
+                        <p class="flex items-center gap-2">
+                            <IconMapPin class="size-4 text-foreground/70" />
+                            <span>{{ locationLabel(device.location) }}</span>
+                        </p>
+                        <p class="flex items-center gap-2">
+                            <IconBulb class="size-4 text-foreground/70" />
+                            <span>{{ deviceTypeLabels[device.type] }}</span>
+                        </p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <div
+                v-else
+                class="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border/80 px-6 py-12 text-center"
+            >
+                <IconBulb class="size-10 text-muted-foreground" />
+                <div class="space-y-1">
+                    <p class="text-base font-medium">Aún no tienes dispositivos</p>
+                    <p class="text-sm text-muted-foreground">
+                        Agrega tu primer dispositivo para visualizarlo en esta lista.
+                    </p>
+                </div>
+                <Button size="lg" @click="isAddDeviceOpen = true">
+                    <IconPlus class="size-4" />
+                    Agregar dispositivo
+                </Button>
             </div>
         </div>
     </AppLayout>
