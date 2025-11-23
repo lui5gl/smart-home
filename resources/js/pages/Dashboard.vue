@@ -682,7 +682,7 @@ const handleAreaFilterChange = (value: number | null): void => {
                     class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 w-full"
                 >
                     <Card v-for="device in devices" :key="device.id" class="border-border/70">
-                        <CardHeader class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <CardHeader class="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div class="space-y-1">
                                 <CardTitle class="text-lg font-semibold">{{ device.name }}</CardTitle>
                                 <CardDescription class="flex items-center gap-2 text-sm">
@@ -690,7 +690,9 @@ const handleAreaFilterChange = (value: number | null): void => {
                                     <span>{{ locationLabel(device.location) }}</span>
                                 </CardDescription>
                             </div>
-                            <div class="flex flex-wrap items-center gap-2">
+                            <div
+                                class="absolute right-6 top-6 flex flex-wrap items-center gap-2 sm:static sm:self-auto sm:justify-end"
+                            >
                                 <DropdownMenu>
                                     <DropdownMenuTrigger :as-child="true">
                                         <Button
