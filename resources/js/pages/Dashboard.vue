@@ -1329,16 +1329,15 @@ onBeforeUnmount(() => {
     0%,
     100% {
         height: 0.75rem;
+        opacity: 0.4;
     }
-
     50% {
-        height: 2rem;
+        height: 3rem;
+        opacity: 1;
     }
 }
 
-.voice-wave-bar {
-    width: 0.35rem;
-    height: 1rem;
+.animate-voice-wave {
     animation: voice-wave 1.2s ease-in-out infinite;
 }
 </style>
