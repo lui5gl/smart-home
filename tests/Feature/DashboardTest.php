@@ -75,3 +75,12 @@ test('users can filter devices by location and area', function () {
             ->where('filters.area', $sala->id)
         );
 });
+
+test('dashboard UI includes the voice mode shortcut', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('Activar modo de voz');
+});

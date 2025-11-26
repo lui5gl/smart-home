@@ -18,6 +18,7 @@ import {
     IconCopy,
     IconDotsVertical,
     IconMapPin,
+    IconMicrophone,
     IconPencil,
     IconPlus,
     IconPower,
@@ -399,6 +400,8 @@ const applyFilters = (locationValue: number | null, areaValue: number | null): v
 const handleAreaFilterChange = (value: number | null): void => {
     applyFilters(locationFilter.value, value);
 };
+
+const voiceModeButtonLabel = 'Activar modo de voz';
 </script>
 
 <template>
@@ -904,4 +907,16 @@ const handleAreaFilterChange = (value: number | null): void => {
             </DialogContent>
         </Dialog>
     </AppLayout>
+    <div class="fixed bottom-6 right-6 z-50 sm:bottom-8 sm:right-8">
+        <Button
+            type="button"
+            size="icon"
+            class="h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40 hover:shadow-primary/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            :aria-label="voiceModeButtonLabel"
+            :title="voiceModeButtonLabel"
+        >
+            <IconMicrophone class="size-6" />
+            <span class="sr-only">{{ voiceModeButtonLabel }}</span>
+        </Button>
+    </div>
 </template>
