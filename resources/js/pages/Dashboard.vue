@@ -2,16 +2,36 @@
 import AreaController from '@/actions/App/Http/Controllers/AreaController';
 import DeviceController from '@/actions/App/Http/Controllers/DeviceController';
 import InputError from '@/components/InputError.vue';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { dashboard } from '@/routes';
-import { type BreadcrumbItem } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { dashboard } from '@/routes';
+import { type BreadcrumbItem } from '@/types';
 import { Form, Head, router } from '@inertiajs/vue3';
 import {
     IconBulb,
@@ -25,8 +45,11 @@ import {
     IconSettings,
     IconSun,
     IconTrash,
+    IconVolume,
+    IconVolumeOff,
+    IconX,
 } from '@tabler/icons-vue';
-import { computed, nextTick, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
 
 type DeviceType = 'switch' | 'dimmer';
 type DeviceStatus = 'on' | 'off';
@@ -95,8 +118,8 @@ const areaOptions = computed<AreaOption[]>(() =>
             id: area.id,
             name: area.name,
             locationName: location.name,
-        }))
-    )
+        })),
+    ),
 );
 
 const deviceDialogMode = ref<'create' | 'edit'>('create');
@@ -167,7 +190,10 @@ watch(isDeviceDialogOpen, (isOpen) => {
     }
 });
 
-const formatDate = (timestamp: string | null, fallback = 'Fecha desconocida'): string => {
+const formatDate = (
+    timestamp: string | null,
+    fallback = 'Fecha desconocida',
+): string => {
     if (!timestamp) {
         return fallback;
     }
@@ -217,26 +243,32 @@ const currentDeviceBrightness = (device: DeviceItem): number => {
         return device.brightness;
     }
 
-    return device.type === 'dimmer' ? defaultDimmerBrightness : defaultSwitchBrightness;
+    return device.type === 'dimmer'
+        ? defaultDimmerBrightness
+        : defaultSwitchBrightness;
 };
 
 const handleStatusToggle = (device: DeviceItem): void => {
     const nextStatus: DeviceStatus = device.status === 'on' ? 'off' : 'on';
     setStatusUpdating(device.id, true);
 
-    router.patch(DeviceController.update.url({ device: device.id }), {
-        name: device.name,
-        location: device.location ?? '',
-        area_id: device.area_id,
-        type: device.type,
-        status: nextStatus,
-        brightness: currentDeviceBrightness(device),
-    }, {
-        preserveScroll: true,
-        onFinish: () => {
-            setStatusUpdating(device.id, false);
+    router.patch(
+        DeviceController.update.url({ device: device.id }),
+        {
+            name: device.name,
+            location: device.location ?? '',
+            area_id: device.area_id,
+            type: device.type,
+            status: nextStatus,
+            brightness: currentDeviceBrightness(device),
         },
-    });
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                setStatusUpdating(device.id, false);
+            },
+        },
+    );
 };
 
 const statusButtonLabel = (device: DeviceItem): string =>
@@ -254,7 +286,10 @@ const setBrightnessUpdating = (deviceId: number, value: boolean): void => {
     brightnessUpdating[deviceId] = value;
 };
 
-const handleBrightnessInput = (device: DeviceItem, value: string | number): void => {
+const handleBrightnessInput = (
+    device: DeviceItem,
+    value: string | number,
+): void => {
     const parsed = Number(value);
 
     if (Number.isNaN(parsed)) {
@@ -264,7 +299,10 @@ const handleBrightnessInput = (device: DeviceItem, value: string | number): void
     brightnessPreview[device.id] = parsed;
 };
 
-const handleBrightnessChange = (device: DeviceItem, value: string | number): void => {
+const handleBrightnessChange = (
+    device: DeviceItem,
+    value: string | number,
+): void => {
     const parsed = Number(value);
 
     if (Number.isNaN(parsed)) {
@@ -274,20 +312,24 @@ const handleBrightnessChange = (device: DeviceItem, value: string | number): voi
     brightnessPreview[device.id] = parsed;
     setBrightnessUpdating(device.id, true);
 
-    router.patch(DeviceController.update.url({ device: device.id }), {
-        name: device.name,
-        location: device.location ?? '',
-        area_id: device.area_id,
-        type: device.type,
-        status: device.status,
-        brightness: parsed,
-    }, {
-        preserveScroll: true,
-        onFinish: () => {
-            setBrightnessUpdating(device.id, false);
-            delete brightnessPreview[device.id];
+    router.patch(
+        DeviceController.update.url({ device: device.id }),
+        {
+            name: device.name,
+            location: device.location ?? '',
+            area_id: device.area_id,
+            type: device.type,
+            status: device.status,
+            brightness: parsed,
         },
-    });
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                setBrightnessUpdating(device.id, false);
+                delete brightnessPreview[device.id];
+            },
+        },
+    );
 };
 
 const hideConfirmationKeyword = 'confirmo';
@@ -295,7 +337,9 @@ const isHideDialogOpen = ref(false);
 const hideConfirmationInput = ref('');
 const deviceToHide = ref<DeviceItem | null>(null);
 const isHideConfirmationValid = computed(
-    () => hideConfirmationInput.value.trim().toLowerCase() === hideConfirmationKeyword
+    () =>
+        hideConfirmationInput.value.trim().toLowerCase() ===
+        hideConfirmationKeyword,
 );
 const isAdvancedDialogOpen = ref(false);
 const advancedDevice = ref<DeviceItem | null>(null);
@@ -324,7 +368,7 @@ const confirmHideDevice = (): void => {
             preserveScroll: true,
             preserveState: true,
             onFinish: closeHideDialog,
-        }
+        },
     );
 };
 
@@ -353,17 +397,16 @@ watch(isAdvancedDialogOpen, (isOpen) => {
     });
 });
 
-
 const dialogTitle = computed(() =>
-    isEditingDevice.value ? 'Editar dispositivo' : 'Agregar dispositivo'
+    isEditingDevice.value ? 'Editar dispositivo' : 'Agregar dispositivo',
 );
 const dialogDescription = computed(() =>
     isEditingDevice.value
         ? 'Actualiza los datos del dispositivo seleccionado.'
-        : 'Ingresa el nombre del dispositivo que deseas agregar.'
+        : 'Ingresa el nombre del dispositivo que deseas agregar.',
 );
 const submitButtonLabel = computed(() =>
-    isEditingDevice.value ? 'Guardar cambios' : 'Agregar'
+    isEditingDevice.value ? 'Guardar cambios' : 'Agregar',
 );
 
 const deviceFormDefinition = computed(() => {
@@ -380,8 +423,12 @@ const handleAreaStored = (): void => {
     isAreaDialogOpen.value = false;
 };
 
-const applyFilters = (locationValue: number | null, areaValue: number | null): void => {
-    const query: Record<string, string | number> = locationValue === null ? {} : { location: locationValue };
+const applyFilters = (
+    locationValue: number | null,
+    areaValue: number | null,
+): void => {
+    const query: Record<string, string | number> =
+        locationValue === null ? {} : { location: locationValue };
 
     if (areaValue !== null) {
         query.area = areaValue;
@@ -393,7 +440,7 @@ const applyFilters = (locationValue: number | null, areaValue: number | null): v
         {
             preserveScroll: true,
             preserveState: true,
-        }
+        },
     );
 };
 
@@ -401,7 +448,55 @@ const handleAreaFilterChange = (value: number | null): void => {
     applyFilters(locationFilter.value, value);
 };
 
-const voiceModeButtonLabel = 'Activar modo de voz';
+const voiceWaveDelays = [0, 0.15, 0.3, 0.45];
+const voiceModeActive = ref(false);
+const voiceModeResponseActive = ref(false);
+const voiceMuted = ref(false);
+const voiceModeButtonLabel = computed(() =>
+    voiceModeActive.value ? 'Modo de voz activo' : 'Activar modo de voz',
+);
+const voiceModeStatusText = computed(() =>
+    voiceModeActive.value ? 'Modo de voz activo' : 'Modo de voz inactivo',
+);
+const voiceMuteButtonLabel = computed(() =>
+    voiceMuted.value ? 'Micrófono silenciado' : 'Silenciar micrófono',
+);
+const voiceMuteIcon = computed(() =>
+    voiceMuted.value ? IconVolumeOff : IconVolume,
+);
+const toggleVoiceMode = (): void => {
+    voiceModeActive.value = !voiceModeActive.value;
+};
+const toggleMute = (): void => {
+    voiceMuted.value = !voiceMuted.value;
+};
+
+let voiceResponseInterval: ReturnType<typeof setInterval> | null = null;
+
+watch(voiceModeActive, (isActive) => {
+    if (isActive) {
+        voiceModeResponseActive.value = true;
+        voiceResponseInterval = setInterval(() => {
+            voiceModeResponseActive.value = !voiceModeResponseActive.value;
+        }, 1300);
+
+        return;
+    }
+
+    voiceModeResponseActive.value = false;
+
+    if (voiceResponseInterval) {
+        clearInterval(voiceResponseInterval);
+        voiceResponseInterval = null;
+    }
+});
+
+onBeforeUnmount(() => {
+    if (voiceResponseInterval) {
+        clearInterval(voiceResponseInterval);
+        voiceResponseInterval = null;
+    }
+});
 </script>
 
 <template>
@@ -411,24 +506,40 @@ const voiceModeButtonLabel = 'Activar modo de voz';
         <div class="flex flex-1 flex-col gap-8 p-6">
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                    <h1 class="text-2xl font-semibold leading-tight">Tus dispositivos</h1>
+                    <h1 class="text-2xl leading-tight font-semibold">
+                        Tus dispositivos
+                    </h1>
                     <p class="text-sm text-muted-foreground">
-                        Consulta y administra los dispositivos inteligentes de tu hogar.
+                        Consulta y administra los dispositivos inteligentes de
+                        tu hogar.
                     </p>
                 </div>
 
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-                    <div class="order-1 w-full sm:order-none sm:w-auto flex flex-col gap-1 text-sm text-muted-foreground">
-                        <Label for="area-filter" class="font-medium text-foreground">Filtrar por área</Label>
+                <div
+                    class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end"
+                >
+                    <div
+                        class="order-1 flex w-full flex-col gap-1 text-sm text-muted-foreground sm:order-none sm:w-auto"
+                    >
+                        <Label
+                            for="area-filter"
+                            class="font-medium text-foreground"
+                            >Filtrar por área</Label
+                        >
                         <select
                             id="area-filter"
-                            class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid-border-destructive flex h-9 min-w-[220px] rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm"
+                            class="aria-invalid-border-destructive flex h-9 min-w-[220px] rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 md:text-sm dark:aria-invalid:ring-destructive/40"
                             :value="areaFilter ?? ''"
                             @change="
                                 handleAreaFilterChange(
-                                    ($event.target as HTMLSelectElement).value === ''
+                                    ($event.target as HTMLSelectElement)
+                                        .value === ''
                                         ? null
-                                        : Number(($event.target as HTMLSelectElement).value)
+                                        : Number(
+                                              (
+                                                  $event.target as HTMLSelectElement
+                                              ).value,
+                                          ),
                                 )
                             "
                         >
@@ -443,178 +554,244 @@ const voiceModeButtonLabel = 'Activar modo de voz';
                         </select>
                     </div>
 
-                    <div class="order-2 w-full sm:order-none sm:w-auto flex flex-wrap gap-2 sm:justify-end">
-                        <Dialog :open="isDeviceDialogOpen" @update:open="isDeviceDialogOpen = $event">
-                        <DialogTrigger as-child>
-                            <Button
-                                size="lg"
-                                class="order-2 h-10 min-w-[200px] px-6 gap-2 sm:order-none sm:w-auto"
-                                @click="openCreateDialog"
-                            >
+                    <div
+                        class="order-2 flex w-full flex-wrap gap-2 sm:order-none sm:w-auto sm:justify-end"
+                    >
+                        <Dialog
+                            :open="isDeviceDialogOpen"
+                            @update:open="isDeviceDialogOpen = $event"
+                        >
+                            <DialogTrigger as-child>
+                                <Button
+                                    size="lg"
+                                    class="order-2 h-10 min-w-[200px] gap-2 px-6 sm:order-none sm:w-auto"
+                                    @click="openCreateDialog"
+                                >
                                     <IconPlus class="size-4" />
                                     Agregar dispositivo
                                 </Button>
                             </DialogTrigger>
                             <DialogContent class="sm:max-w-md">
-                            <DialogHeader class="space-y-2">
-                                <DialogTitle>{{ dialogTitle }}</DialogTitle>
-                                <DialogDescription>
-                                    {{ dialogDescription }}
-                                </DialogDescription>
-                            </DialogHeader>
+                                <DialogHeader class="space-y-2">
+                                    <DialogTitle>{{ dialogTitle }}</DialogTitle>
+                                    <DialogDescription>
+                                        {{ dialogDescription }}
+                                    </DialogDescription>
+                                </DialogHeader>
 
-                            <Form
-                                v-bind="deviceFormDefinition"
-                                reset-on-success
-                                @success="handleDeviceSaved"
-                                class="space-y-6"
-                                v-slot="{ errors, processing }"
-                            >
-                            <div class="grid gap-4">
-                                <div class="grid gap-2">
-                                    <Label for="device-name">Nombre del dispositivo</Label>
-                                    <Input
-                                        id="device-name"
-                                        v-model="deviceName"
-                                        name="name"
-                                        autocomplete="off"
-                                        placeholder="Ej. Sensor de temperatura"
-                                        required
-                                        :aria-invalid="Boolean(errors.name)"
-                                    />
-                                    <InputError :message="errors.name" />
-                                </div>
-
-                                <div class="grid gap-2">
-                                    <div class="flex items-center justify-between">
-                                        <Label for="device-area">Área registrada</Label>
-                                        <Button
-                                            type="button"
-                                            variant="link"
-                                            size="sm"
-                                            class="h-auto p-0 text-xs font-medium"
-                                            @click="isAreaDialogOpen = true"
-                                        >
-                                            Crear nueva área
-                                        </Button>
-                                    </div>
-                                    <select
-                                        id="device-area"
-                                        v-model="selectedDeviceAreaId"
-                                        name="area_id"
-                                        class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid-border-destructive flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm disabled:opacity-70"
-                                        :disabled="!areaOptions.length"
-                                    >
-                                        <option value="">Selecciona un área</option>
-                                        <option
-                                            v-for="area in areaOptions"
-                                            :key="area.id"
-                                            :value="area.id"
-                                        >
-                                            {{ area.name }} — {{ area.locationName }}
-                                        </option>
-                                    </select>
-                                    <p
-                                        v-if="!areaOptions.length"
-                                        class="text-xs text-muted-foreground"
-                                    >
-                                        Crea un área desde el botón &quot;Nueva área&quot; antes de continuar.
-                                    </p>
-                                    <InputError :message="errors.area_id" />
-                                </div>
-
-                                    <div class="grid gap-2">
-                                        <Label for="device-type">Tipo de dispositivo</Label>
-                                        <select
-                                            id="device-type"
-                                            v-model="deviceType"
-                                            name="type"
-                                            class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid-border-destructive flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm"
-                                        >
-                                            <option value="switch">Encendido / Apagado</option>
-                                            <option value="dimmer">Regulable</option>
-                                        </select>
-                                        <InputError :message="errors.type" />
-                                    </div>
-
-                                <div
-                                    v-if="deviceDialogMode === 'create'"
-                                    class="grid gap-2"
+                                <Form
+                                    v-bind="deviceFormDefinition"
+                                    reset-on-success
+                                    @success="handleDeviceSaved"
+                                    class="space-y-6"
+                                    v-slot="{ errors, processing }"
                                 >
-                                    <Label for="device-status">Estado</Label>
-                                    <select
-                                        id="device-status"
-                                        v-model="deviceStatus"
-                                        name="status"
-                                        class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid-border-destructive flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm"
-                                    >
-                                        <option value="on">Encendido</option>
-                                        <option value="off">Apagado</option>
-                                    </select>
-                                    <InputError :message="errors.status" />
-                                </div>
-                                <input
-                                    v-else
-                                    type="hidden"
-                                    name="status"
-                                    :value="deviceStatus"
-                                />
-
-                                <div
-                                    v-if="showBrightnessControl && deviceDialogMode === 'create'"
-                                    class="grid gap-2"
-                                >
-                                    <div class="flex items-center justify-between">
-                                        <Label for="device-brightness">Nivel de potencia</Label>
-                                        <span class="text-sm text-muted-foreground"
-                                                >{{ deviceBrightnessLabel }}%</span
+                                    <div class="grid gap-4">
+                                        <div class="grid gap-2">
+                                            <Label for="device-name"
+                                                >Nombre del dispositivo</Label
                                             >
+                                            <Input
+                                                id="device-name"
+                                                v-model="deviceName"
+                                                name="name"
+                                                autocomplete="off"
+                                                placeholder="Ej. Sensor de temperatura"
+                                                required
+                                                :aria-invalid="
+                                                    Boolean(errors.name)
+                                                "
+                                            />
+                                            <InputError
+                                                :message="errors.name"
+                                            />
+                                        </div>
+
+                                        <div class="grid gap-2">
+                                            <div
+                                                class="flex items-center justify-between"
+                                            >
+                                                <Label for="device-area"
+                                                    >Área registrada</Label
+                                                >
+                                                <Button
+                                                    type="button"
+                                                    variant="link"
+                                                    size="sm"
+                                                    class="h-auto p-0 text-xs font-medium"
+                                                    @click="
+                                                        isAreaDialogOpen = true
+                                                    "
+                                                >
+                                                    Crear nueva área
+                                                </Button>
+                                            </div>
+                                            <select
+                                                id="device-area"
+                                                v-model="selectedDeviceAreaId"
+                                                name="area_id"
+                                                class="aria-invalid-border-destructive flex h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-70 aria-invalid:ring-destructive/20 md:text-sm dark:aria-invalid:ring-destructive/40"
+                                                :disabled="!areaOptions.length"
+                                            >
+                                                <option value="">
+                                                    Selecciona un área
+                                                </option>
+                                                <option
+                                                    v-for="area in areaOptions"
+                                                    :key="area.id"
+                                                    :value="area.id"
+                                                >
+                                                    {{ area.name }} —
+                                                    {{ area.locationName }}
+                                                </option>
+                                            </select>
+                                            <p
+                                                v-if="!areaOptions.length"
+                                                class="text-xs text-muted-foreground"
+                                            >
+                                                Crea un área desde el botón
+                                                &quot;Nueva área&quot; antes de
+                                                continuar.
+                                            </p>
+                                            <InputError
+                                                :message="errors.area_id"
+                                            />
+                                        </div>
+
+                                        <div class="grid gap-2">
+                                            <Label for="device-type"
+                                                >Tipo de dispositivo</Label
+                                            >
+                                            <select
+                                                id="device-type"
+                                                v-model="deviceType"
+                                                name="type"
+                                                class="aria-invalid-border-destructive flex h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 md:text-sm dark:aria-invalid:ring-destructive/40"
+                                            >
+                                                <option value="switch">
+                                                    Encendido / Apagado
+                                                </option>
+                                                <option value="dimmer">
+                                                    Regulable
+                                                </option>
+                                            </select>
+                                            <InputError
+                                                :message="errors.type"
+                                            />
+                                        </div>
+
+                                        <div
+                                            v-if="deviceDialogMode === 'create'"
+                                            class="grid gap-2"
+                                        >
+                                            <Label for="device-status"
+                                                >Estado</Label
+                                            >
+                                            <select
+                                                id="device-status"
+                                                v-model="deviceStatus"
+                                                name="status"
+                                                class="aria-invalid-border-destructive flex h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 md:text-sm dark:aria-invalid:ring-destructive/40"
+                                            >
+                                                <option value="on">
+                                                    Encendido
+                                                </option>
+                                                <option value="off">
+                                                    Apagado
+                                                </option>
+                                            </select>
+                                            <InputError
+                                                :message="errors.status"
+                                            />
                                         </div>
                                         <input
-                                            id="device-brightness"
-                                            v-model.number="deviceBrightness"
-                                            type="range"
-                                            min="0"
-                                            max="100"
-                                            step="5"
-                                            name="brightness"
-                                            class="accent-primary h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary"
+                                            v-else
+                                            type="hidden"
+                                            name="status"
+                                            :value="deviceStatus"
                                         />
-                                        <div class="flex justify-between text-xs text-muted-foreground">
-                                            <span>0%</span>
-                                            <span>50%</span>
-                                            <span>100%</span>
+
+                                        <div
+                                            v-if="
+                                                showBrightnessControl &&
+                                                deviceDialogMode === 'create'
+                                            "
+                                            class="grid gap-2"
+                                        >
+                                            <div
+                                                class="flex items-center justify-between"
+                                            >
+                                                <Label for="device-brightness"
+                                                    >Nivel de potencia</Label
+                                                >
+                                                <span
+                                                    class="text-sm text-muted-foreground"
+                                                    >{{
+                                                        deviceBrightnessLabel
+                                                    }}%</span
+                                                >
+                                            </div>
+                                            <input
+                                                id="device-brightness"
+                                                v-model.number="
+                                                    deviceBrightness
+                                                "
+                                                type="range"
+                                                min="0"
+                                                max="100"
+                                                step="5"
+                                                name="brightness"
+                                                class="h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary accent-primary"
+                                            />
+                                            <div
+                                                class="flex justify-between text-xs text-muted-foreground"
+                                            >
+                                                <span>0%</span>
+                                                <span>50%</span>
+                                                <span>100%</span>
+                                            </div>
+                                            <InputError
+                                                :message="errors.brightness"
+                                            />
                                         </div>
-                                        <InputError :message="errors.brightness" />
+                                        <input
+                                            v-else
+                                            type="hidden"
+                                            name="brightness"
+                                            :value="deviceBrightness"
+                                        />
                                     </div>
-                                    <input
-                                        v-else
-                                        type="hidden"
-                                        name="brightness"
-                                        :value="deviceBrightness"
-                                    />
-                                </div>
 
-                                <DialogFooter class="gap-2">
-                                    <DialogClose as-child>
-                                        <Button type="button" variant="secondary">Cancelar</Button>
-                                    </DialogClose>
-                                    <Button type="submit" :disabled="processing">
-                                        {{ submitButtonLabel }}
-                                    </Button>
-                                </DialogFooter>
-                            </Form>
-                        </DialogContent>
-                    </Dialog>
+                                    <DialogFooter class="gap-2">
+                                        <DialogClose as-child>
+                                            <Button
+                                                type="button"
+                                                variant="secondary"
+                                                >Cancelar</Button
+                                            >
+                                        </DialogClose>
+                                        <Button
+                                            type="submit"
+                                            :disabled="processing"
+                                        >
+                                            {{ submitButtonLabel }}
+                                        </Button>
+                                    </DialogFooter>
+                                </Form>
+                            </DialogContent>
+                        </Dialog>
 
-                        <Dialog :open="isAreaDialogOpen" @update:open="isAreaDialogOpen = $event">
-                        <DialogTrigger as-child>
-                            <Button
-                                size="lg"
-                                variant="outline"
-                                class="h-10 min-w-[200px] px-6 gap-2 sm:w-auto order-1 sm:order-none"
-                                @click="isAreaDialogOpen = true"
-                            >
+                        <Dialog
+                            :open="isAreaDialogOpen"
+                            @update:open="isAreaDialogOpen = $event"
+                        >
+                            <DialogTrigger as-child>
+                                <Button
+                                    size="lg"
+                                    variant="outline"
+                                    class="order-1 h-10 min-w-[200px] gap-2 px-6 sm:order-none sm:w-auto"
+                                    @click="isAreaDialogOpen = true"
+                                >
                                     <IconPlus class="size-4" />
                                     Nueva área
                                 </Button>
@@ -623,7 +800,8 @@ const voiceModeButtonLabel = 'Activar modo de voz';
                                 <DialogHeader class="space-y-2">
                                     <DialogTitle>Registrar área</DialogTitle>
                                     <DialogDescription>
-                                        Primero elige una ubicación y luego asigna un nombre descriptivo.
+                                        Primero elige una ubicación y luego
+                                        asigna un nombre descriptivo.
                                     </DialogDescription>
                                 </DialogHeader>
                                 <Form
@@ -634,14 +812,18 @@ const voiceModeButtonLabel = 'Activar modo de voz';
                                     v-slot="{ errors, processing }"
                                 >
                                     <div class="grid gap-2">
-                                        <Label for="new-area-location">Ubicación</Label>
+                                        <Label for="new-area-location"
+                                            >Ubicación</Label
+                                        >
                                         <select
                                             id="new-area-location"
                                             v-model="newAreaLocationId"
                                             name="location_id"
-                                            class="border-input focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid-border-destructive flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring md:text-sm"
+                                            class="aria-invalid-border-destructive flex h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 md:text-sm dark:aria-invalid:ring-destructive/40"
                                         >
-                                            <option value="">Selecciona una ubicación</option>
+                                            <option value="">
+                                                Selecciona una ubicación
+                                            </option>
                                             <option
                                                 v-for="location in availableLocations"
                                                 :key="location.id"
@@ -650,11 +832,15 @@ const voiceModeButtonLabel = 'Activar modo de voz';
                                                 {{ location.name }}
                                             </option>
                                         </select>
-                                        <InputError :message="errors.location_id" />
+                                        <InputError
+                                            :message="errors.location_id"
+                                        />
                                     </div>
 
                                     <div class="grid gap-2">
-                                        <Label for="new-area-name">Nombre del área</Label>
+                                        <Label for="new-area-name"
+                                            >Nombre del área</Label
+                                        >
                                         <Input
                                             id="new-area-name"
                                             v-model="newAreaName"
@@ -668,9 +854,16 @@ const voiceModeButtonLabel = 'Activar modo de voz';
 
                                     <DialogFooter class="gap-2">
                                         <DialogClose as-child>
-                                            <Button type="button" variant="secondary">Cancelar</Button>
+                                            <Button
+                                                type="button"
+                                                variant="secondary"
+                                                >Cancelar</Button
+                                            >
                                         </DialogClose>
-                                        <Button type="submit" :disabled="processing">
+                                        <Button
+                                            type="submit"
+                                            :disabled="processing"
+                                        >
                                             Guardar área
                                         </Button>
                                     </DialogFooter>
@@ -682,19 +875,33 @@ const voiceModeButtonLabel = 'Activar modo de voz';
 
                 <div
                     v-if="hasDevices"
-                    class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 w-full"
+                    class="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
                 >
-                    <Card v-for="device in devices" :key="device.id" class="border-border/70">
-                        <CardHeader class="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <Card
+                        v-for="device in devices"
+                        :key="device.id"
+                        class="border-border/70"
+                    >
+                        <CardHeader
+                            class="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+                        >
                             <div class="space-y-1">
-                                <CardTitle class="text-lg font-semibold">{{ device.name }}</CardTitle>
-                                <CardDescription class="flex items-center gap-2 text-sm">
-                                    <IconMapPin class="size-4 text-foreground/70" />
-                                    <span>{{ locationLabel(device.location) }}</span>
+                                <CardTitle class="text-lg font-semibold">{{
+                                    device.name
+                                }}</CardTitle>
+                                <CardDescription
+                                    class="flex items-center gap-2 text-sm"
+                                >
+                                    <IconMapPin
+                                        class="size-4 text-foreground/70"
+                                    />
+                                    <span>{{
+                                        locationLabel(device.location)
+                                    }}</span>
                                 </CardDescription>
                             </div>
                             <div
-                                class="absolute right-6 top-6 flex flex-wrap items-center gap-2 sm:static sm:self-auto sm:justify-end"
+                                class="absolute top-6 right-6 flex flex-wrap items-center gap-2 sm:static sm:justify-end sm:self-auto"
                             >
                                 <DropdownMenu>
                                     <DropdownMenuTrigger :as-child="true">
@@ -702,17 +909,24 @@ const voiceModeButtonLabel = 'Activar modo de voz';
                                             type="button"
                                             variant="outline"
                                             size="sm"
-                                            class="gap-2 shrink-0"
+                                            class="shrink-0 gap-2"
                                         >
                                             <IconDotsVertical class="size-4" />
                                         </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" class="w-40">
-                                        <DropdownMenuItem @click="openEditDialog(device)">
+                                    <DropdownMenuContent
+                                        align="end"
+                                        class="w-40"
+                                    >
+                                        <DropdownMenuItem
+                                            @click="openEditDialog(device)"
+                                        >
                                             <IconPencil class="size-4" />
                                             Editar
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem @click="openAdvancedDialog(device)">
+                                        <DropdownMenuItem
+                                            @click="openAdvancedDialog(device)"
+                                        >
                                             <IconSettings class="size-4" />
                                             Avanzado
                                         </DropdownMenuItem>
@@ -726,30 +940,45 @@ const voiceModeButtonLabel = 'Activar modo de voz';
                                 </DropdownMenu>
                             </div>
                         </CardHeader>
-                        <CardContent class="space-y-4 text-sm text-muted-foreground">
+                        <CardContent
+                            class="space-y-4 text-sm text-muted-foreground"
+                        >
                             <div
                                 class="flex flex-col gap-3 rounded-lg border border-border/60 p-3 text-foreground/80 sm:flex-row sm:items-center sm:justify-between"
                             >
                                 <div class="flex flex-col">
-                                    <span class="text-xs uppercase tracking-wide text-muted-foreground/80">
+                                    <span
+                                        class="text-xs tracking-wide text-muted-foreground/80 uppercase"
+                                    >
                                         Estado actual
                                     </span>
-                                    <span class="text-base font-medium text-foreground">
+                                    <span
+                                        class="text-base font-medium text-foreground"
+                                    >
                                         {{ statusLabels[device.status] }}
                                     </span>
                                 </div>
                                 <Button
                                     type="button"
-                                    :variant="device.status === 'on' ? 'outline' : 'default'"
+                                    :variant="
+                                        device.status === 'on'
+                                            ? 'outline'
+                                            : 'default'
+                                    "
                                     size="sm"
                                     class="w-full sm:w-auto"
                                     :disabled="statusUpdating[device.id]"
                                     @click="handleStatusToggle(device)"
                                 >
-                                    <Spinner v-if="statusUpdating[device.id]" class="size-4" />
+                                    <Spinner
+                                        v-if="statusUpdating[device.id]"
+                                        class="size-4"
+                                    />
                                     <template v-else>
                                         <IconPower class="size-4" />
-                                        <span>{{ statusButtonLabel(device) }}</span>
+                                        <span>{{
+                                            statusButtonLabel(device)
+                                        }}</span>
                                     </template>
                                 </Button>
                             </div>
@@ -757,12 +986,18 @@ const voiceModeButtonLabel = 'Activar modo de voz';
                                 v-if="device.type === 'dimmer'"
                                 class="space-y-3 rounded-lg border border-border/60 p-3 text-foreground"
                             >
-                                <div class="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground/80">
-                                    <span class="inline-flex items-center gap-1 text-muted-foreground">
+                                <div
+                                    class="flex items-center justify-between text-xs tracking-wide text-muted-foreground/80 uppercase"
+                                >
+                                    <span
+                                        class="inline-flex items-center gap-1 text-muted-foreground"
+                                    >
                                         <IconSun class="size-4" />
                                         Nivel de potencia
                                     </span>
-                                    <span class="text-base font-semibold text-foreground">
+                                    <span
+                                        class="text-base font-semibold text-foreground"
+                                    >
                                         {{ currentDeviceBrightness(device) }}%
                                     </span>
                                 </div>
@@ -772,16 +1007,31 @@ const voiceModeButtonLabel = 'Activar modo de voz';
                                     max="100"
                                     step="5"
                                     :value="currentDeviceBrightness(device)"
-                                    class="accent-primary h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary disabled:cursor-not-allowed"
+                                    class="h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary accent-primary disabled:cursor-not-allowed"
                                     :disabled="brightnessUpdating[device.id]"
-                                    @input="handleBrightnessInput(device, $event.target.value)"
-                                    @change="handleBrightnessChange(device, $event.target.value)"
+                                    @input="
+                                        handleBrightnessInput(
+                                            device,
+                                            $event.target.value,
+                                        )
+                                    "
+                                    @change="
+                                        handleBrightnessChange(
+                                            device,
+                                            $event.target.value,
+                                        )
+                                    "
                                 />
-                                <div class="flex items-center justify-between text-xs text-muted-foreground">
+                                <div
+                                    class="flex items-center justify-between text-xs text-muted-foreground"
+                                >
                                     <span>Apagado</span>
                                     <span>Máximo</span>
                                 </div>
-                                <p v-if="brightnessUpdating[device.id]" class="text-xs text-muted-foreground">
+                                <p
+                                    v-if="brightnessUpdating[device.id]"
+                                    class="text-xs text-muted-foreground"
+                                >
                                     Actualizando potencia...
                                 </p>
                             </div>
@@ -794,9 +1044,12 @@ const voiceModeButtonLabel = 'Activar modo de voz';
                 >
                     <IconBulb class="size-10 text-muted-foreground" />
                     <div class="space-y-1">
-                        <p class="text-base font-medium">Aún no tienes dispositivos</p>
+                        <p class="text-base font-medium">
+                            Aún no tienes dispositivos
+                        </p>
                         <p class="text-sm text-muted-foreground">
-                            Agrega tu primer dispositivo para visualizarlo en esta lista.
+                            Agrega tu primer dispositivo para visualizarlo en
+                            esta lista.
                         </p>
                     </div>
                     <Button size="lg" @click="openCreateDialog">
@@ -806,19 +1059,27 @@ const voiceModeButtonLabel = 'Activar modo de voz';
                 </div>
             </div>
         </div>
-        <Dialog :open="isAdvancedDialogOpen" @update:open="isAdvancedDialogOpen = $event">
+        <Dialog
+            :open="isAdvancedDialogOpen"
+            @update:open="isAdvancedDialogOpen = $event"
+        >
             <DialogContent class="sm:max-w-lg">
                 <DialogHeader class="space-y-2">
                     <DialogTitle>Opciones avanzadas</DialogTitle>
                     <DialogDescription>
-                        Comparte este enlace con tu dispositivo para leer su estado actual.
+                        Comparte este enlace con tu dispositivo para leer su
+                        estado actual.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div v-if="advancedDevice" class="space-y-4">
                     <div class="grid gap-2">
-                        <Label for="advanced-webhook-url">URL del webhook</Label>
-                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <Label for="advanced-webhook-url"
+                            >URL del webhook</Label
+                        >
+                        <div
+                            class="flex flex-col gap-2 sm:flex-row sm:items-center"
+                        >
                             <Input
                                 id="advanced-webhook-url"
                                 :model-value="advancedDevice.webhook_url"
@@ -837,13 +1098,18 @@ const voiceModeButtonLabel = 'Activar modo de voz';
                             </Button>
                         </div>
                         <p class="text-xs text-muted-foreground">
-                            Tus dispositivos pueden usar esta URL para consultar el estado y la potencia.
+                            Tus dispositivos pueden usar esta URL para consultar
+                            el estado y la potencia.
                         </p>
                     </div>
 
-                    <div class="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3 text-sm text-foreground">
+                    <div
+                        class="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3 text-sm text-foreground"
+                    >
                         <div class="flex items-center justify-between">
-                            <span class="inline-flex items-center gap-1 text-muted-foreground">
+                            <span
+                                class="inline-flex items-center gap-1 text-muted-foreground"
+                            >
                                 <IconPower class="size-4" />
                                 Estado
                             </span>
@@ -852,7 +1118,9 @@ const voiceModeButtonLabel = 'Activar modo de voz';
                             </span>
                         </div>
                         <div class="flex items-center justify-between">
-                            <span class="inline-flex items-center gap-1 text-muted-foreground">
+                            <span
+                                class="inline-flex items-center gap-1 text-muted-foreground"
+                            >
                                 <IconSun class="size-4" />
                                 Potencia
                             </span>
@@ -869,17 +1137,23 @@ const voiceModeButtonLabel = 'Activar modo de voz';
 
                 <DialogFooter class="justify-end gap-2">
                     <DialogClose as-child>
-                        <Button type="button" variant="secondary">Cerrar</Button>
+                        <Button type="button" variant="secondary"
+                            >Cerrar</Button
+                        >
                     </DialogClose>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-        <Dialog :open="isHideDialogOpen" @update:open="isHideDialogOpen = $event">
+        <Dialog
+            :open="isHideDialogOpen"
+            @update:open="isHideDialogOpen = $event"
+        >
             <DialogContent class="sm:max-w-xs">
                 <DialogHeader class="space-y-2">
                     <DialogTitle>Confirmar eliminación</DialogTitle>
                     <DialogDescription>
-                        Escribe <strong>&ldquo;confirmo&rdquo;</strong> para marcar este dispositivo como eliminado.
+                        Escribe <strong>&ldquo;confirmo&rdquo;</strong> para
+                        marcar este dispositivo como eliminado.
                     </DialogDescription>
                 </DialogHeader>
                 <div class="grid gap-2">
@@ -893,7 +1167,12 @@ const voiceModeButtonLabel = 'Activar modo de voz';
                 </div>
                 <DialogFooter class="flex w-full justify-end gap-2">
                     <DialogClose as-child>
-                        <Button type="button" variant="secondary" @click="closeHideDialog">Cancelar</Button>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            @click="closeHideDialog"
+                            >Cancelar</Button
+                        >
                     </DialogClose>
                     <Button
                         type="button"
@@ -907,16 +1186,113 @@ const voiceModeButtonLabel = 'Activar modo de voz';
             </DialogContent>
         </Dialog>
     </AppLayout>
-    <div class="fixed bottom-6 right-6 z-50 sm:bottom-8 sm:right-8">
+    <div
+        class="fixed right-6 bottom-6 z-50 flex flex-col items-center sm:right-8 sm:bottom-8"
+    >
         <Button
             type="button"
             size="icon"
             class="h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40 hover:shadow-primary/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             :aria-label="voiceModeButtonLabel"
             :title="voiceModeButtonLabel"
+            :aria-pressed="voiceModeActive"
+            @click="toggleVoiceMode"
         >
             <IconMicrophone class="size-6" />
             <span class="sr-only">{{ voiceModeButtonLabel }}</span>
         </Button>
+        <p
+            class="mt-2 text-xs font-semibold text-white"
+            :class="voiceModeActive ? 'text-emerald-400' : 'text-white/70'"
+        >
+            {{ voiceModeStatusText }}
+        </p>
     </div>
+    <teleport to="body">
+        <div
+            v-if="voiceModeActive"
+            class="fixed inset-0 z-50 bg-black/95"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Panel de voz"
+        >
+            <div
+                class="flex h-full w-full flex-col items-center justify-center gap-8 px-6 py-16 text-center text-white"
+            >
+                <div
+                    class="flex h-40 w-40 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-all duration-300"
+                    :class="
+                        voiceModeResponseActive
+                            ? 'bg-emerald-400/80 shadow-[0_0_60px_rgba(16,185,129,0.8)]'
+                            : 'bg-white/10 shadow-[0_0_30px_rgba(255,255,255,0.3)]'
+                    "
+                >
+                    <IconMicrophone class="size-7 text-white" />
+                </div>
+                <p class="text-3xl font-semibold">Modo de voz</p>
+                <p class="text-sm text-white/70">
+                    {{
+                        voiceModeResponseActive
+                            ? 'La IA está respondiendo'
+                            : 'Escuchando tus comandos'
+                    }}
+                </p>
+                <div
+                    class="flex items-end gap-2"
+                    role="status"
+                    aria-live="polite"
+                >
+                    <span
+                        v-for="delay in voiceWaveDelays"
+                        :key="delay"
+                        class="voice-wave-bar rounded-full bg-white/70"
+                        :style="{ animationDelay: `${delay}s` }"
+                    ></span>
+                </div>
+                <div
+                    class="flex flex-col items-center gap-3 sm:flex-row"
+                >
+                    <Button
+                        variant="outline"
+                        size="lg"
+                        type="button"
+                        class="flex h-12 min-w-[160px] items-center justify-center gap-2 rounded-full border-white/30 px-6 py-3 text-neutral-700"
+                        @click="toggleMute"
+                    >
+                        <component :is="voiceMuteIcon" class="size-4" />
+                        {{ voiceMuteButtonLabel }}
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        size="lg"
+                        type="button"
+                        class="flex h-12 w-12 items-center justify-center rounded-full p-0"
+                        aria-label="Cerrar modo de voz"
+                        @click="toggleVoiceMode"
+                    >
+                        <IconX class="size-4" />
+                    </Button>
+                </div>
+            </div>
+        </div>
+    </teleport>
 </template>
+
+<style scoped>
+@keyframes voice-wave {
+    0%,
+    100% {
+        height: 0.75rem;
+    }
+
+    50% {
+        height: 2rem;
+    }
+}
+
+.voice-wave-bar {
+    width: 0.35rem;
+    height: 1rem;
+    animation: voice-wave 1.2s ease-in-out infinite;
+}
+</style>

@@ -82,5 +82,6 @@ test('dashboard UI includes the voice mode shortcut', function () {
     $this->actingAs($user)
         ->get(route('dashboard'))
         ->assertOk()
-        ->assertSee('Activar modo de voz');
+        ->assertSee('Activar modo de voz')
+        ->assertSee('Modo de voz inactivo');
 });
