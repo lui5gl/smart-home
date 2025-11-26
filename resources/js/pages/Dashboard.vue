@@ -1209,72 +1209,118 @@ onBeforeUnmount(() => {
         </p>
     </div>
     <teleport to="body">
-        <div
-            v-if="voiceModeActive"
-            class="fixed inset-0 z-50 bg-gradient-to-br from-neutral-800 bg-neutral-950"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Panel de voz"
+        <transition
+            enter-active-class="transition ease-out duration-300"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition ease-in duration-200"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
         >
             <div
-                class="flex h-full w-full flex-col items-center justify-center gap-8 px-6 py-16 text-center text-white"
+                v-if="voiceModeActive"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Panel de voz"
             >
                 <div
-                    class="flex h-40 w-40 items-center justify-center rounded-full border border-white/10 bg-white/5 transition-all duration-300"
-                    :class="
-                        voiceModeResponseActive
-                            ? 'bg-emerald-400/80 shadow-[0_0_60px_rgba(16,185,129,0.8)]'
-                            : 'bg-white/10 shadow-[0_0_30px_rgba(255,255,255,0.3)]'
-                    "
+                    class="relative flex w-full max-w-lg flex-col items-center gap-12 p-8 text-center"
                 >
-                    <IconMicrophone class="size-7 text-white" />
-                </div>
-                <p class="text-3xl font-semibold">Modo de voz</p>
-                <p class="text-sm text-white/70">
-                    {{
-                        voiceModeResponseActive
-                            ? 'La IA está respondiendo'
-                            : 'Escuchando tus comandos'
-                    }}
-                </p>
-                <div
-                    class="flex items-end gap-2"
-                    role="status"
-                    aria-live="polite"
-                >
-                    <span
-                        v-for="delay in voiceWaveDelays"
-                        :key="delay"
-                        class="voice-wave-bar rounded-full bg-white/70"
-                        :style="{ animationDelay: `${delay}s` }"
-                    ></span>
-                </div>
-                <div
-                    class="flex flex-col items-center gap-3 sm:flex-row"
-                >
-                    <Button
-                        variant="outline"
-                        size="lg"
-                        type="button"
-                        class="flex h-12 min-w-[160px] items-center justify-center gap-2 rounded-full border-white/30 px-6 py-3 text-neutral-700"
-                        @click="toggleMute"
+                    <!-- Status Indicator Ring -->
+                    <div class="relative">
+                        <div
+                            class="absolute inset-0 animate-ping rounded-full opacity-20 duration-2000"
+                            :class="
+                                voiceModeResponseActive
+                                    ? 'bg-emerald-500'
+                                    : 'bg-white'
+                            "
+                        ></div>
+                        <div
+                            class="flex h-32 w-32 items-center justify-center rounded-full border border-white/10 shadow-2xl transition-all duration-500"
+                            :class="
+                                voiceModeResponseActive
+                                    ? 'bg-emerald-500/20 shadow-emerald-500/20 ring-2 ring-emerald-500/50'
+                                    : 'bg-white/5 shadow-white/10 ring-1 ring-white/20'
+                            "
+                        >
+                            <IconMicrophone
+                                class="size-12 transition-transform duration-500"
+                                :class="
+                                    voiceModeResponseActive
+                                        ? 'scale-110 text-emerald-400'
+                                        : 'text-white'
+                                "
+                            />
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <h2
+                            class="text-3xl font-bold tracking-tight text-white"
+                        >
+                            Modo de voz
+                        </h2>
+                        <p class="text-lg text-white/60">
+                            {{
+                                voiceModeResponseActive
+                                    ? 'Procesando tu solicitud...'
+                                    : 'Te escucho, dime qué hacer...'
+                            }}
+                        </p>
+                    </div>
+
+                    <!-- Wave Animation -->
+                    <div
+                        class="flex h-16 items-end gap-2"
+                        role="status"
+                        aria-live="polite"
                     >
-                        <component :is="voiceMuteIcon" class="size-4" />
-                        {{ voiceMuteButtonLabel }}
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        size="lg"
-                        type="button"
-                        class="flex h-12 w-12 items-center justify-center rounded-full p-0"
-                        aria-label="Cerrar modo de voz"
-                        @click="toggleVoiceMode"
-                    >
-                        <IconX class="size-4" />
-                    </Button>
+                        <span
+                            v-for="delay in voiceWaveDelays"
+                            :key="delay"
+                            class="w-2 rounded-full bg-white/80 transition-all duration-300"
+                            :class="{
+                                'animate-voice-wave': !voiceModeResponseActive,
+                                'h-4 bg-emerald-400': voiceModeResponseActive,
+                            }"
+                            :style="{
+                                animationDelay: `${delay}s`,
+                            }"
+                        ></span>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="flex items-center gap-6">
+                        <Button
+                            variant="outline"
+                            size="lg"
+                            type="button"
+                            class="h-14 rounded-full border-white/10 bg-white/5 px-8 text-base font-medium text-white backdrop-blur-sm transition-all hover:bg-white/10 hover:text-white hover:border-white/20"
+                            @click="toggleMute"
+                        >
+                            <component
+                                :is="voiceMuteIcon"
+                                class="mr-2 size-5"
+                            />
+                            {{ voiceMuteButtonLabel }}
+                        </Button>
+
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            type="button"
+                            class="h-14 w-14 rounded-full border border-white/10 bg-white/5 text-white transition-all hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-400"
+                            aria-label="Cerrar modo de voz"
+                            @click="toggleVoiceMode"
+                        >
+                            <IconX class="size-6" />
+                        </Button>
+                    </div>
                 </div>
             </div>
-        </div>
+        </transition>
     </teleport>
 </template>
 
