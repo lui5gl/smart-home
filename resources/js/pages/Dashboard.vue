@@ -1211,7 +1211,7 @@ onBeforeUnmount(() => {
     <teleport to="body">
         <div
             v-if="voiceModeActive"
-            class="fixed inset-0 z-50 bg-black/95"
+            class="fixed inset-0 z-50 bg-gradient-to-br from-neutral-800 bg-neutral-950"
             role="dialog"
             aria-modal="true"
             aria-label="Panel de voz"
