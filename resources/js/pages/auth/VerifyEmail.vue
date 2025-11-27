@@ -17,7 +17,7 @@ defineProps<{
         title="Verificar correo electrónico"
         description="Por favor verifica tu dirección de correo electrónico haciendo clic en el enlace que acabamos de enviarte."
     >
-        <Head title="Email verification" />
+        <Head title="Verificación de correo electrónico" />
 
         <div
             v-if="status === 'verification-link-sent'"
