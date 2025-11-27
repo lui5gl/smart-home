@@ -1,0 +1,85 @@
+<?php
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+
+class OpenAIRealtimeService
+{
+    protected string $apiKey;
+
+    public function __construct()
+    {
+        $this->apiKey = env('OPENAI_API_KEY');
+    }
+
+    public function createEphemeralSession(): array
+    {
+        $response = Http::withToken($this->apiKey)
+            ->post('https://api.openai.com/v1/realtime/sessions', [
+                'model' => 'gpt-4o-mini-realtime-preview-2024-12-17',
+                'modalities' => ['audio', 'text'],
+                'instructions' => 'Eres un asistente inteligente para el hogar (Smart Home). Tienes acceso a los dispositivos del usuario. Tu objetivo es controlar estos dispositivos y reportar su estado real. Habla español de manera concisa y amable.
+                
+                IMPORTANTE:
+                1. NO alucines estados. Si no sabes, usa la herramienta get_devices.
+                2. Cuando te pidan cambiar algo (encender, apagar, brillo), usa control_device.
+                3. Si el usuario te saluda, saluda brevemente y espera ordenes.',
+                'voice' => 'verse',
+                'turn_detection' => [
+                    'type' => 'server_vad',
+                    'threshold' => 0.5,
+                    'prefix_padding_ms' => 300,
+                    'silence_duration_ms' => 500,
+                ],
+                'tools' => [
+                    [
+                        'type' => 'function',
+                        'name' => 'get_devices',
+                        'description' => 'Obtiene la lista de dispositivos, su estado, tipo y ubicación.',
+                        'parameters' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'location_filter' => [
+                                    'type' => 'string',
+                                    'description' => 'Filtrar por nombre de ubicación (opcional)',
+                                ],
+                            ],
+                        ],
+                    ],
+                    [
+                        'type' => 'function',
+                        'name' => 'control_device',
+                        'description' => 'Controla un dispositivo (encender, apagar, cambiar brillo).',
+                        'parameters' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'device_name' => [
+                                    'type' => 'string',
+                                    'description' => 'El nombre aproximado del dispositivo a controlar.',
+                                ],
+                                'action' => [
+                                    'type' => 'string',
+                                    'enum' => ['turn_on', 'turn_off', 'set_brightness'],
+                                    'description' => 'La acción a realizar.',
+                                ],
+                                'brightness' => [
+                                    'type' => 'integer',
+                                    'description' => 'El nivel de brillo (0-100) si la acción es set_brightness.',
+                                ],
+                            ],
+                            'required' => ['device_name', 'action'],
+                        ],
+                    ],
+                ],
+            ]);
+
+        if ($response->failed()) {
+            Log::error('OpenAI Session Creation Failed: ' . $response->body());
+            throw new \Exception('Failed to create OpenAI session');
+        }
+
+        return $response->json();
+    }
+}

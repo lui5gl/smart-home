@@ -33,6 +33,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Form, Head, router } from '@inertiajs/vue3';
+import axios from 'axios';
 import {
     IconBulb,
     IconCopy,
@@ -464,38 +465,341 @@ const voiceMuteButtonLabel = computed(() =>
 const voiceMuteIcon = computed(() =>
     voiceMuted.value ? IconVolumeOff : IconVolume,
 );
+
 const toggleVoiceMode = (): void => {
     voiceModeActive.value = !voiceModeActive.value;
 };
+
 const toggleMute = (): void => {
     voiceMuted.value = !voiceMuted.value;
+    // If muted, we stop sending audio chunks
 };
 
-let voiceResponseInterval: ReturnType<typeof setInterval> | null = null;
+// --- Realtime API State ---
+const isConnecting = ref(false);
+const isTalking = ref(false); // AI is talking
+const isListening = ref(false); // User is talking (VAD detected)
+const socket = ref<WebSocket | null>(null);
+const audioContext = ref<AudioContext | null>(null);
+const streamSource = ref<MediaStreamAudioSourceNode | null>(null);
+const audioWorkletNode = ref<AudioWorkletNode | null>(null);
+const assistantAudioQueue: string[] = []; // Base64 PCM chunks
+let isPlayingAudio = false;
+let nextStartTime = 0;
 
-watch(voiceModeActive, (isActive) => {
-    if (isActive) {
-        voiceModeResponseActive.value = true;
-        voiceResponseInterval = setInterval(() => {
-            voiceModeResponseActive.value = !voiceModeResponseActive.value;
-        }, 1300);
+// Helper to convert Float32 (Web Audio) to Int16 (OpenAI)
+const floatTo16BitPCM = (float32Array: Float32Array): Int16Array => {
+    const int16Array = new Int16Array(float32Array.length);
+    for (let i = 0; i < float32Array.length; i++) {
+        let s = Math.max(-1, Math.min(1, float32Array[i]));
+        int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+    }
+    return int16Array;
+};
 
+const base64EncodeAudio = (int16Array: Int16Array): string => {
+    let binary = '';
+    const bytes = new Uint8Array(int16Array.buffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+};
+
+const startRealtimeSession = async () => {
+    isConnecting.value = true;
+    responseText.value = 'Inicializando audio...';
+
+    try {
+        // 0. Init Audio Context immediately
+        if (!audioContext.value) {
+             audioContext.value = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+        }
+
+        // 1. Start Microphone (User Experience)
+        responseText.value = 'Solicitando acceso al micrófono...';
+        await startMicrophone();
+        
+        // 2. Get Ephemeral Token
+        responseText.value = 'Autenticando...';
+        const sessionResponse = await axios.post('/voice/session');
+        const token = sessionResponse.data.client_secret.value;
+
+        // 3. Connect WebSocket
+        responseText.value = 'Conectando con OpenAI...';
+        const wsUrl = `wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview-2024-12-17`;
+        socket.value = new WebSocket(wsUrl, [
+            'realtime', 
+            `openai-insecure-api-key.${token}`, 
+            'openai-beta.realtime-v1'
+        ]);
+
+        // Connection Timeout Safety
+        const connectionTimeout = setTimeout(() => {
+            if (isConnecting.value && socket.value?.readyState !== WebSocket.OPEN) {
+                console.error('Connection timed out');
+                responseText.value = 'Tiempo de espera agotado.';
+                socket.value?.close();
+                isConnecting.value = false;
+            }
+        }, 10000);
+
+        socket.value.onopen = async () => {
+            clearTimeout(connectionTimeout);
+            console.log('WebSocket Connected');
+            isConnecting.value = false;
+            responseText.value = 'Conectado. Inicializando...';
+            
+            // Configure Session
+            const sessionUpdate = {
+                type: 'session.update',
+                session: {
+                    modalities: ['text', 'audio'],
+                    instructions: 'Eres un asistente inteligente para el hogar. Controla dispositivos y sé breve.',
+                    voice: 'verse',
+                    input_audio_format: 'pcm16',
+                    output_audio_format: 'pcm16',
+                    turn_detection: {
+                        type: 'server_vad',
+                        threshold: 0.5,
+                        prefix_padding_ms: 300,
+                        silence_duration_ms: 500,
+                    }
+                }
+            };
+            socket.value?.send(JSON.stringify(sessionUpdate));
+            
+            responseText.value = 'Te escucho...';
+        };
+
+        socket.value.onmessage = async (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                // Log all events for debugging
+                console.log('Realtime Event:', data.type, data);
+                handleServerEvent(data);
+            } catch (e) {
+                console.error('Error parsing event:', e);
+            }
+        };
+
+        socket.value.onerror = (err) => {
+            console.error('WebSocket Error:', err);
+            responseText.value = 'Error de conexión con OpenAI.';
+            isConnecting.value = false;
+            // Do not close immediately, let user see error
+        };
+        
+        socket.value.onclose = (event) => {
+             console.log('WebSocket Closed', event.code, event.reason);
+             if (isConnecting.value || voiceModeActive.value) {
+                 responseText.value = 'Conexión cerrada.';
+                 isConnecting.value = false;
+             }
+        };
+
+    } catch (e) {
+        console.error('Failed to start session:', e);
+        responseText.value = 'Error al iniciar sesión de voz.';
+        isConnecting.value = false;
+    }
+};
+
+const startMicrophone = async () => {
+    if (!audioContext.value) return;
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log('Microphone started. Context Sample Rate:', audioContext.value.sampleRate);
+        
+        streamSource.value = audioContext.value.createMediaStreamSource(stream);
+
+        const processor = audioContext.value.createScriptProcessor(4096, 1, 1);
+        
+        processor.onaudioprocess = (e) => {
+            if (voiceMuted.value || !socket.value || socket.value.readyState !== WebSocket.OPEN) return;
+
+            const inputData = e.inputBuffer.getChannelData(0);
+            const pcm16 = floatTo16BitPCM(inputData);
+            const base64 = base64EncodeAudio(pcm16);
+
+            socket.value.send(JSON.stringify({
+                type: 'input_audio_buffer.append',
+                audio: base64,
+            }));
+        };
+
+        streamSource.value.connect(processor);
+        processor.connect(audioContext.value.destination);
+    } catch (err) {
+        console.error('Microphone Error:', err);
+        responseText.value = 'Error al acceder al micrófono.';
+        throw err; // Re-throw to stop session start
+    }
+};
+
+const handleServerEvent = async (event: any) => {
+    switch (event.type) {
+        case 'error':
+            console.error('Server Error:', event.error);
+            responseText.value = `Error: ${event.error.message}`;
+            break;
+        case 'session.created':
+            console.log('Session Created:', event.session);
+            break;
+        case 'session.updated':
+            console.log('Session Updated');
+            break;
+        case 'input_audio_buffer.speech_started':
+            console.log('Speech Started');
+            isListening.value = true;
+            isTalking.value = false;
+            interruptAudio();
+            socket.value?.send(JSON.stringify({ type: 'input_audio_buffer.clear' }));
+            break;
+        case 'input_audio_buffer.speech_stopped':
+            console.log('Speech Stopped');
+            isListening.value = false;
+            break;
+        case 'response.audio.delta':
+             if (event.delta) {
+                 queueAudio(event.delta);
+             }
+             break;
+        case 'response.text.delta':
+             if (event.delta) {
+                 // console.log('Text:', event.delta); 
+             }
+             break;
+        case 'response.function_call_arguments.done':
+             const callId = event.call_id;
+             const name = event.name;
+             const args = JSON.parse(event.arguments);
+             
+             console.log(`Calling Tool: ${name}`, args);
+             responseText.value = `Ejecutando: ${name}...`;
+             
+             try {
+                 const result = await axios.post('/voice/tool', {
+                     name: name,
+                     arguments: args
+                 });
+                 
+                 console.log('Tool Result:', result.data);
+
+                 socket.value?.send(JSON.stringify({
+                     type: 'conversation.item.create',
+                     item: {
+                         type: 'function_call_output',
+                         call_id: callId,
+                         output: JSON.stringify(result.data),
+                     }
+                 }));
+                 
+                 socket.value?.send(JSON.stringify({
+                     type: 'response.create',
+                 }));
+                 
+                 router.reload({ only: ['devices'] });
+                 responseText.value = 'Dispositivo actualizado.';
+                 
+             } catch (err) {
+                 console.error('Tool error', err);
+                 responseText.value = 'Error ejecutando acción.';
+             }
+             break;
+        case 'response.done':
+            console.log('Response Done');
+            break;
+    }
+};
+
+const queueAudio = (base64Data: string) => {
+    assistantAudioQueue.push(base64Data);
+    if (!isPlayingAudio) {
+        playNextAudioChunk();
+    }
+};
+
+const playNextAudioChunk = async () => {
+    if (assistantAudioQueue.length === 0) {
+        isPlayingAudio = false;
+        isTalking.value = false;
         return;
     }
 
-    voiceModeResponseActive.value = false;
+    isPlayingAudio = true;
+    isTalking.value = true;
+    
+    const chunk = assistantAudioQueue.shift();
+    if (!chunk || !audioContext.value) return;
 
-    if (voiceResponseInterval) {
-        clearInterval(voiceResponseInterval);
-        voiceResponseInterval = null;
+    // Decode Base64 PCM16 to AudioBuffer
+    const binary = window.atob(chunk);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+    const int16 = new Int16Array(bytes.buffer);
+    const float32 = new Float32Array(int16.length);
+    for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768.0;
+
+    const buffer = audioContext.value.createBuffer(1, float32.length, 24000);
+    buffer.getChannelData(0).set(float32);
+
+    const source = audioContext.value.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.value.destination);
+    
+    const currentTime = audioContext.value.currentTime;
+    if (nextStartTime < currentTime) nextStartTime = currentTime;
+    
+    source.start(nextStartTime);
+    nextStartTime += buffer.duration;
+    
+    source.onended = () => {
+        // Just a trigger, logic is handled by queue consumption usually, 
+        // but since we schedule ahead, this is loose. 
+    };
+
+    // Schedule next immediately
+    playNextAudioChunk();
+};
+
+const interruptAudio = () => {
+    assistantAudioQueue.length = 0; // Clear queue
+    isPlayingAudio = false;
+    isTalking.value = false;
+    nextStartTime = 0;
+    // We can't easily stop currently playing node without keeping reference to all sources, 
+    // but clearing queue helps.
+    // Ideally, we would disconnect the destination or suspend context briefly.
+};
+
+const stopRealtimeSession = () => {
+    if (socket.value) {
+        socket.value.close();
+        socket.value = null;
+    }
+    if (audioContext.value) {
+        audioContext.value.close();
+        audioContext.value = null;
+    }
+    isConnecting.value = false;
+    isListening.value = false;
+    isTalking.value = false;
+};
+
+watch(voiceModeActive, (isActive) => {
+    if (isActive) {
+        startRealtimeSession();
+    } else {
+        stopRealtimeSession();
     }
 });
 
 onBeforeUnmount(() => {
-    if (voiceResponseInterval) {
-        clearInterval(voiceResponseInterval);
-        voiceResponseInterval = null;
-    }
+    stopRealtimeSession();
 });
 </script>
 
@@ -1264,9 +1568,13 @@ onBeforeUnmount(() => {
                         </h2>
                         <p class="text-lg text-white/60">
                             {{
-                                voiceModeResponseActive
-                                    ? 'Procesando tu solicitud...'
-                                    : 'Te escucho, dime qué hacer...'
+                                isConnecting
+                                    ? 'Conectando...'
+                                    : isTalking
+                                      ? 'Hablando...'
+                                      : isListening
+                                        ? 'Te escucho...'
+                                        : responseText || 'Esperando...'
                             }}
                         </p>
                     </div>
@@ -1282,8 +1590,9 @@ onBeforeUnmount(() => {
                             :key="delay"
                             class="w-2 rounded-full bg-white/80 transition-all duration-300"
                             :class="{
-                                'animate-voice-wave': !voiceModeResponseActive,
-                                'h-4 bg-emerald-400': voiceModeResponseActive,
+                                'animate-voice-wave': isTalking || isListening,
+                                'h-4 bg-emerald-400': isTalking,
+                                'h-2 bg-white/40': !isTalking && !isListening,
                             }"
                             :style="{
                                 animationDelay: `${delay}s`,

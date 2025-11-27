@@ -104,4 +104,16 @@ Route::post('locations', [LocationController::class, 'store'])
     ->middleware(['auth', 'verified'])
     ->name('locations.store');
 
+Route::post('voice/session', [\App\Http\Controllers\VoiceCommandController::class, 'createSession'])
+    ->middleware(['auth', 'verified'])
+    ->name('voice.session');
+
+Route::post('voice/tool', [\App\Http\Controllers\VoiceCommandController::class, 'executeTool'])
+    ->middleware(['auth', 'verified'])
+    ->name('voice.tool');
+
+// Route::post('voice-command', [\App\Http\Controllers\VoiceCommandController::class, 'handle'])
+//     ->middleware(['auth', 'verified'])
+//     ->name('voice.command');
+
 require __DIR__.'/settings.php';
