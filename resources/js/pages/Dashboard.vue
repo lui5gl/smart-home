@@ -102,7 +102,7 @@ const props = defineProps<Props>();
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Dashboard',
+        title: 'Panel de control',
         href: dashboard().url,
     },
 ];
