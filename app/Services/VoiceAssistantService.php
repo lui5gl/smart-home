@@ -10,9 +10,15 @@ class VoiceAssistantService
 {
     protected Client $client;
 
-    public function __construct()
+    public function __construct(protected ?string $apiKey = null)
     {
-        $this->client = \OpenAI::client(env('OPENAI_API_KEY'));
+        $this->apiKey = (string) ($apiKey ?? config('services.openai.key'));
+
+        if ($this->apiKey === '') {
+            throw new \InvalidArgumentException('OpenAI API key is not configured.');
+        }
+
+        $this->client = \OpenAI::client($this->apiKey);
     }
 
     public function processCommand(string $input, ?string $audioPath = null): array
@@ -77,7 +83,7 @@ class VoiceAssistantService
         ];
 
         $response = $this->client->chat()->create([
-            'model' => 'gpt-4o-mini', 
+            'model' => 'gpt-4o-mini',
             'messages' => $messages,
             'tools' => $tools,
             'tool_choice' => 'auto',
@@ -114,7 +120,7 @@ class VoiceAssistantService
                 'model' => 'gpt-4o-mini',
                 'messages' => $messages,
             ]);
-            
+
             $responseText = $finalResponse->choices[0]->message->content;
         }
 
@@ -127,11 +133,11 @@ class VoiceAssistantService
                     'input' => $responseText,
                     'voice' => 'nova', // Friendly voice
                 ]);
-                
+
                 $audioContent = base64_encode($audioResponse);
             }
         } catch (\Exception $e) {
-            Log::error('TTS Error: ' . $e->getMessage());
+            Log::error('TTS Error: '.$e->getMessage());
             // Fail silently on audio, still return text
         }
 
@@ -158,7 +164,7 @@ class VoiceAssistantService
     protected function getDevices(?string $locationFilter): array
     {
         $query = Device::with(['location', 'area'])->visible();
-        
+
         if ($locationFilter) {
             $query->whereHas('location', function ($q) use ($locationFilter) {
                 $q->where('name', 'like', "%{$locationFilter}%");
@@ -181,12 +187,12 @@ class VoiceAssistantService
     protected function controlDevice(string $deviceName, string $action, ?int $brightness): array
     {
         $device = Device::visible()->where('name', $deviceName)->first();
-        
-        if (!$device) {
-             $device = Device::visible()->where('name', 'like', "%{$deviceName}%")->first();
+
+        if (! $device) {
+            $device = Device::visible()->where('name', 'like', "%{$deviceName}%")->first();
         }
 
-        if (!$device) {
+        if (! $device) {
             return ['error' => "No encontré ningún dispositivo llamado '{$deviceName}'."];
         }
 
@@ -213,8 +219,8 @@ class VoiceAssistantService
             'message' => "Dispositivo '{$device->name}' actualizado.",
             'device_state' => [
                 'status' => $device->status,
-                'brightness' => $device->brightness
-            ]
+                'brightness' => $device->brightness,
+            ],
         ];
     }
 }

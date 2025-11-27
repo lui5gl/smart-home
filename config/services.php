@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'openai' => [
+        'key' => env('OPENAI_API_KEY'),
+        'realtime_model' => env('OPENAI_REALTIME_MODEL', 'gpt-realtime-mini-2025-10-06'),
+    ],
+
 ];

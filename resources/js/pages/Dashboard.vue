@@ -465,6 +465,7 @@ const voiceMuteButtonLabel = computed(() =>
 const voiceMuteIcon = computed(() =>
     voiceMuted.value ? IconVolumeOff : IconVolume,
 );
+const responseText = ref<string>('');
 
 const toggleVoiceMode = (): void => {
     voiceModeActive.value = !voiceModeActive.value;
@@ -507,6 +508,31 @@ const base64EncodeAudio = (int16Array: Int16Array): string => {
     return window.btoa(binary);
 };
 
+const ensureMicrophonePermission = async (): Promise<boolean> => {
+    if (!navigator?.mediaDevices?.getUserMedia) {
+        alert('Tu navegador no permite acceder al micrófono.');
+        return false;
+    }
+
+    try {
+        const status = await navigator.permissions?.query({
+            name: 'microphone' as PermissionName,
+        });
+
+        if (status && status.state === 'denied') {
+            alert(
+                'Necesitamos permiso para usar tu micrófono. Actívalo en el navegador y vuelve a intentarlo.',
+            );
+
+            return false;
+        }
+    } catch (error) {
+        console.warn('Permission API unavailable or failed', error);
+    }
+
+    return true;
+};
+
 const startRealtimeSession = async () => {
     isConnecting.value = true;
     responseText.value = 'Inicializando audio...';
@@ -519,16 +545,29 @@ const startRealtimeSession = async () => {
 
         // 1. Start Microphone (User Experience)
         responseText.value = 'Solicitando acceso al micrófono...';
+        const hasPermission = await ensureMicrophonePermission();
+
+        if (!hasPermission) {
+            isConnecting.value = false;
+            voiceModeActive.value = false;
+            return;
+        }
+
         await startMicrophone();
         
         // 2. Get Ephemeral Token
         responseText.value = 'Autenticando...';
         const sessionResponse = await axios.post('/voice/session');
+        const realtimeModel =
+            sessionResponse.data?.model ??
+            'gpt-realtime-mini-2025-10-06';
         const token = sessionResponse.data.client_secret.value;
 
         // 3. Connect WebSocket
         responseText.value = 'Conectando con OpenAI...';
-        const wsUrl = `wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview-2024-12-17`;
+        const wsUrl = `wss://api.openai.com/v1/realtime?model=${encodeURIComponent(
+            realtimeModel,
+        )}`;
         socket.value = new WebSocket(wsUrl, [
             'realtime', 
             `openai-insecure-api-key.${token}`, 
@@ -635,6 +674,18 @@ const startMicrophone = async () => {
     } catch (err) {
         console.error('Microphone Error:', err);
         responseText.value = 'Error al acceder al micrófono.';
+        const error = err as DOMException;
+
+        if (
+            error?.name === 'NotAllowedError' ||
+            error?.name === 'SecurityError'
+        ) {
+            alert(
+                'No tenemos permiso para usar tu micrófono. Otorga acceso y vuelve a intentarlo.',
+            );
+        }
+
+        voiceModeActive.value = false;
         throw err; // Re-throw to stop session start
     }
 };

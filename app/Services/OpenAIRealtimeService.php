@@ -7,18 +7,26 @@ use Illuminate\Support\Facades\Log;
 
 class OpenAIRealtimeService
 {
-    protected string $apiKey;
+    public function __construct(
+        protected ?string $apiKey = null,
+        protected ?string $realtimeModel = null,
+    ) {
+        $this->apiKey = (string) ($apiKey ?? config('services.openai.key'));
+        $this->realtimeModel = (string) ($realtimeModel ?? config('services.openai.realtime_model', 'gpt-realtime-mini-2025-10-06'));
 
-    public function __construct()
-    {
-        $this->apiKey = env('OPENAI_API_KEY');
+        if ($this->apiKey === '') {
+            throw new \InvalidArgumentException('OpenAI API key is not configured.');
+        }
     }
 
     public function createEphemeralSession(): array
     {
-        $response = Http::withToken($this->apiKey)
+        $response = Http::withHeaders([
+            'OpenAI-Beta' => 'realtime=v1',
+        ])
+            ->withToken($this->apiKey)
             ->post('https://api.openai.com/v1/realtime/sessions', [
-                'model' => 'gpt-4o-mini-realtime-preview-2024-12-17',
+                'model' => $this->realtimeModel,
                 'modalities' => ['audio', 'text'],
                 'instructions' => 'Eres un asistente inteligente para el hogar (Smart Home). Tienes acceso a los dispositivos del usuario. Tu objetivo es controlar estos dispositivos y reportar su estado real. Habla español de manera concisa y amable.
                 
@@ -76,7 +84,7 @@ class OpenAIRealtimeService
             ]);
 
         if ($response->failed()) {
-            Log::error('OpenAI Session Creation Failed: ' . $response->body());
+            Log::error('OpenAI Session Creation Failed: '.$response->body());
             throw new \Exception('Failed to create OpenAI session');
         }
 
