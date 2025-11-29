@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('devices', function (Blueprint $table) {
-            $table->boolean('hidden')->default(false)->after('status');
+            $table->boolean('hidden')->default(false)->after('type');
         });
     }
 
