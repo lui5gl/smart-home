@@ -485,6 +485,7 @@ const audioContext = ref<AudioContext | null>(null);
 const streamSource = ref<MediaStreamAudioSourceNode | null>(null);
 const audioWorkletNode = ref<AudioWorkletNode | null>(null);
 const assistantAudioQueue: string[] = []; // Base64 PCM chunks
+const activeSources: AudioBufferSourceNode[] = [];
 let isPlayingAudio = false;
 let nextStartTime = 0;
 
@@ -776,7 +777,6 @@ const queueAudio = (base64Data: string) => {
 const playNextAudioChunk = async () => {
     if (assistantAudioQueue.length === 0) {
         isPlayingAudio = false;
-        isTalking.value = false;
         return;
     }
 
@@ -808,9 +808,17 @@ const playNextAudioChunk = async () => {
     source.start(nextStartTime);
     nextStartTime += buffer.duration;
     
+    activeSources.push(source);
+
     source.onended = () => {
-        // Just a trigger, logic is handled by queue consumption usually, 
-        // but since we schedule ahead, this is loose. 
+        const index = activeSources.indexOf(source);
+        if (index > -1) {
+            activeSources.splice(index, 1);
+        }
+        
+        if (activeSources.length === 0 && assistantAudioQueue.length === 0) {
+            isTalking.value = false;
+        }
     };
 
     // Schedule next immediately
@@ -821,10 +829,17 @@ const interruptAudio = () => {
     assistantAudioQueue.length = 0; // Clear queue
     isPlayingAudio = false;
     isTalking.value = false;
+    
+    activeSources.forEach((source) => {
+        try {
+            source.stop();
+        } catch (e) {
+            // Ignore if already stopped
+        }
+    });
+    activeSources.length = 0;
+    
     nextStartTime = 0;
-    // We can't easily stop currently playing node without keeping reference to all sources, 
-    // but clearing queue helps.
-    // Ideally, we would disconnect the destination or suspend context briefly.
 };
 
 const stopRealtimeSession = () => {
