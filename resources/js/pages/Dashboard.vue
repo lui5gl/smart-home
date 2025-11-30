@@ -924,7 +924,7 @@ onBeforeUnmount(() => {
                 </div>
                 <div class="grid gap-3 sm:grid-cols-3">
                     <div class="flex items-start gap-3 rounded-xl border border-border/60 bg-card p-4 shadow-xs">
-                        <span class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-base font-semibold text-primary-foreground">
+                        <span class="flex flex-shrink-0 h-8 w-8 m-auto items-center justify-center rounded-full bg-primary text-base font-semibold text-primary-foreground">
                             1
                         </span>
                         <div class="space-y-1">
@@ -935,7 +935,7 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
                     <div class="flex items-start gap-3 rounded-xl border border-border/60 bg-card p-4 shadow-xs">
-                        <span class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-base font-semibold text-primary-foreground">
+                        <span class="flex flex-shrink-0 h-8 w-8 m-auto items-center justify-center rounded-full bg-primary text-base font-semibold text-primary-foreground">
                             2
                         </span>
                         <div class="space-y-1">
@@ -946,7 +946,7 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
                     <div class="flex items-start gap-3 rounded-xl border border-border/60 bg-card p-4 shadow-xs">
-                        <span class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-base font-semibold text-primary-foreground">
+                        <span class="flex flex-shrink-0 h-8 w-8 m-auto items-center justify-center rounded-full bg-primary text-base font-semibold text-primary-foreground">
                             3
                         </span>
                         <div class="space-y-1">
