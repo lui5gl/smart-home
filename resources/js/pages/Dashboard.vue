@@ -1410,7 +1410,7 @@ onBeforeUnmount(() => {
                 </div>
                 <div
                     v-else
-                    class="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border/80 px-6 py-12 text-center"
+                    class="flex m-auto flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border/80 px-6 py-12 text-center"
                 >
                     <IconBulb class="size-10 text-muted-foreground" />
                     <div class="space-y-1">
