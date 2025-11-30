@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AreaController from '@/actions/App/Http/Controllers/AreaController';
 import DeviceController from '@/actions/App/Http/Controllers/DeviceController';
+import LocationController from '@/actions/App/Http/Controllers/LocationController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -113,6 +114,7 @@ const availableLocations = computed(() => props.locations);
 const filters = computed(() => props.filters);
 const locationFilter = computed(() => filters.value.location);
 const areaFilter = computed(() => filters.value.area ?? null);
+const hasLocations = computed(() => availableLocations.value.length > 0);
 const areaOptions = computed<AreaOption[]>(() =>
     availableLocations.value.flatMap((location) =>
         location.areas.map((area) => ({
@@ -122,6 +124,8 @@ const areaOptions = computed<AreaOption[]>(() =>
         })),
     ),
 );
+const hasAreas = computed(() => areaOptions.value.length > 0);
+const showOnboarding = computed(() => !hasAreas.value);
 
 const deviceDialogMode = ref<'create' | 'edit'>('create');
 const isDeviceDialogOpen = ref(false);
@@ -154,6 +158,7 @@ const isAreaDialogOpen = ref(false);
 const newAreaName = ref('');
 const newAreaLocationId = ref<number | ''>('');
 const copyButton = ref<HTMLButtonElement | null>(null);
+const onboardingLocationName = ref('');
 
 const areasForFilter = computed(() => areaOptions.value);
 
@@ -418,10 +423,34 @@ const deviceFormDefinition = computed(() => {
     return DeviceController.store.form();
 });
 
+watch(availableLocations, (locations) => {
+    if (!locations.length || newAreaLocationId.value) {
+        return;
+    }
+
+    newAreaLocationId.value = locations[0].id;
+});
+
+watch(areaOptions, (areas) => {
+    if (!areas.length || selectedDeviceAreaId.value) {
+        return;
+    }
+
+    selectedDeviceAreaId.value = areas[0].id;
+});
+
 const handleAreaStored = (): void => {
     newAreaName.value = '';
     newAreaLocationId.value = '';
     isAreaDialogOpen.value = false;
+};
+
+const handleOnboardingLocationStored = (): void => {
+    onboardingLocationName.value = '';
+};
+
+const handleOnboardingDeviceSaved = (): void => {
+    resetDeviceForm();
 };
 
 const applyFilters = (
@@ -493,7 +522,7 @@ let nextStartTime = 0;
 const floatTo16BitPCM = (float32Array: Float32Array): Int16Array => {
     const int16Array = new Int16Array(float32Array.length);
     for (let i = 0; i < float32Array.length; i++) {
-        let s = Math.max(-1, Math.min(1, float32Array[i]));
+        const s = Math.max(-1, Math.min(1, float32Array[i]));
         int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
     }
     return int16Array;
@@ -874,7 +903,268 @@ onBeforeUnmount(() => {
     <Head title="Panel" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-1 flex-col gap-8 p-6">
+        <div v-if="showOnboarding" class="flex flex-1 flex-col gap-8 p-6">
+            <div
+                class="grid gap-6 rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-background to-background p-6 shadow-sm sm:p-8"
+            >
+                <div class="space-y-3">
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                        Primeros pasos
+                    </p>
+                    <h1 class="text-3xl font-bold leading-tight text-foreground sm:text-4xl">
+                        Configura tu hogar inteligente
+                    </h1>
+                    <p class="max-w-2xl text-sm text-muted-foreground sm:text-base">
+                        Crea tu primera ubicación, define un área y registra tu primer dispositivo en minutos.
+                        Sigue los pasos en orden para que todo quede listo.
+                    </p>
+                </div>
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <div class="flex items-start gap-3 rounded-xl border border-border/60 bg-card p-4 shadow-xs">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-base font-semibold text-primary-foreground">
+                            1
+                        </span>
+                        <div class="space-y-1">
+                            <p class="text-sm font-semibold text-foreground">Ubicación</p>
+                            <p class="text-xs text-muted-foreground">
+                                Nombra el lugar donde instalarás tus dispositivos (casa, oficina, etc.).
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 rounded-xl border border-border/60 bg-card p-4 shadow-xs">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-base font-semibold text-primary-foreground">
+                            2
+                        </span>
+                        <div class="space-y-1">
+                            <p class="text-sm font-semibold text-foreground">Área</p>
+                            <p class="text-xs text-muted-foreground">
+                                Divide la ubicación por zonas (sala, cocina, jardín) para organizar mejor.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3 rounded-xl border border-border/60 bg-card p-4 shadow-xs">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-base font-semibold text-primary-foreground">
+                            3
+                        </span>
+                        <div class="space-y-1">
+                            <p class="text-sm font-semibold text-foreground">Dispositivo</p>
+                            <p class="text-xs text-muted-foreground">
+                                Registra tu primer equipo para verlo en el panel y controlarlo.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid gap-6 lg:grid-cols-3">
+                <Card class="border-border/70">
+                    <CardHeader class="space-y-2">
+                        <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                            <IconMapPin class="size-4" />
+                            Paso 1
+                        </div>
+                        <CardTitle>Crear ubicación</CardTitle>
+                        <CardDescription>
+                            Dale un nombre al espacio físico donde se encuentran tus dispositivos.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Form
+                            v-bind="LocationController.store.form()"
+                            reset-on-success
+                            @success="handleOnboardingLocationStored"
+                            class="space-y-4"
+                            v-slot="{ errors, processing }"
+                        >
+                            <div class="grid gap-2">
+                                <Label for="onboarding-location-name">Nombre</Label>
+                                <Input
+                                    id="onboarding-location-name"
+                                    v-model="onboardingLocationName"
+                                    name="name"
+                                    autocomplete="off"
+                                    placeholder="Ej. Casa principal"
+                                    :aria-invalid="Boolean(errors.name)"
+                                />
+                                <InputError :message="errors.name" />
+                            </div>
+                            <Button type="submit" class="w-full" :disabled="processing">
+                                Guardar ubicación
+                            </Button>
+                        </Form>
+                    </CardContent>
+                </Card>
+
+                <Card class="border-border/70">
+                    <CardHeader class="space-y-2">
+                        <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                            <IconBulb class="size-4" />
+                            Paso 2
+                        </div>
+                        <CardTitle>Agregar área</CardTitle>
+                        <CardDescription>
+                            Elige una ubicación y crea el área donde estará tu primer dispositivo.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Form
+                            v-bind="AreaController.store.form()"
+                            reset-on-success
+                            @success="handleAreaStored"
+                            class="space-y-4"
+                            v-slot="{ errors, processing }"
+                        >
+                            <div class="grid gap-2">
+                                <Label for="onboarding-area-location">Ubicación</Label>
+                                <select
+                                    id="onboarding-area-location"
+                                    v-model="newAreaLocationId"
+                                    name="location_id"
+                                    class="aria-invalid-border-destructive flex h-10 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-70 aria-invalid:ring-destructive/20 md:text-sm dark:aria-invalid:ring-destructive/40"
+                                    :disabled="!hasLocations"
+                                >
+                                    <option value="">Selecciona una ubicación</option>
+                                    <option
+                                        v-for="location in availableLocations"
+                                        :key="location.id"
+                                        :value="location.id"
+                                    >
+                                        {{ location.name }}
+                                    </option>
+                                </select>
+                                <InputError :message="errors.location_id" />
+                                <p v-if="!hasLocations" class="text-xs text-muted-foreground">
+                                    Primero crea una ubicación para habilitar este paso.
+                                </p>
+                            </div>
+
+                            <div class="grid gap-2">
+                                <Label for="onboarding-area-name">Nombre del área</Label>
+                                <Input
+                                    id="onboarding-area-name"
+                                    v-model="newAreaName"
+                                    name="name"
+                                    autocomplete="off"
+                                    placeholder="Ej. Sala, Cocina, Oficina"
+                                    :aria-invalid="Boolean(errors.name)"
+                                    :disabled="!hasLocations"
+                                />
+                                <InputError :message="errors.name" />
+                            </div>
+
+                            <Button type="submit" class="w-full" :disabled="processing || !hasLocations">
+                                Guardar área
+                            </Button>
+                        </Form>
+                    </CardContent>
+                </Card>
+
+                <Card class="border-border/70">
+                    <CardHeader class="space-y-2">
+                        <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                            <IconPower class="size-4" />
+                            Paso 3
+                        </div>
+                        <CardTitle>Registrar dispositivo</CardTitle>
+                        <CardDescription>
+                            Define el tipo de dispositivo y asígnalo al área para verlo en tu panel.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Form
+                            v-bind="DeviceController.store.form()"
+                            reset-on-success
+                            @success="handleOnboardingDeviceSaved"
+                            class="space-y-4"
+                            v-slot="{ errors, processing }"
+                        >
+                            <div class="grid gap-2">
+                                <Label for="onboarding-device-name">Nombre del dispositivo</Label>
+                                <Input
+                                    id="onboarding-device-name"
+                                    v-model="deviceName"
+                                    name="name"
+                                    autocomplete="off"
+                                    placeholder="Ej. Luz principal"
+                                    :aria-invalid="Boolean(errors.name)"
+                                    :disabled="!hasAreas"
+                                />
+                                <InputError :message="errors.name" />
+                            </div>
+
+                            <div class="grid gap-2">
+                                <Label for="onboarding-device-area">Área</Label>
+                                <select
+                                    id="onboarding-device-area"
+                                    v-model="selectedDeviceAreaId"
+                                    name="area_id"
+                                    class="aria-invalid-border-destructive flex h-10 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-70 aria-invalid:ring-destructive/20 md:text-sm dark:aria-invalid:ring-destructive/40"
+                                    :disabled="!hasAreas"
+                                >
+                                    <option value="">Selecciona un área</option>
+                                    <option v-for="area in areaOptions" :key="area.id" :value="area.id">
+                                        {{ area.name }} — {{ area.locationName }}
+                                    </option>
+                                </select>
+                                <InputError :message="errors.area_id" />
+                                <p v-if="!hasAreas" class="text-xs text-muted-foreground">
+                                    Crea al menos un área para poder asignar el dispositivo.
+                                </p>
+                            </div>
+
+                            <div class="grid gap-2">
+                                <Label for="onboarding-device-type">Tipo</Label>
+                                <select
+                                    id="onboarding-device-type"
+                                    v-model="deviceType"
+                                    name="type"
+                                    class="aria-invalid-border-destructive flex h-10 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 md:text-sm dark:aria-invalid:ring-destructive/40"
+                                    :disabled="!hasAreas"
+                                >
+                                    <option value="switch">Encendido / Apagado</option>
+                                    <option value="dimmer">Regulable</option>
+                                </select>
+                                <InputError :message="errors.type" />
+                            </div>
+
+                            <div v-if="deviceType === 'dimmer'" class="grid gap-2">
+                                <div class="flex items-center justify-between">
+                                    <Label for="onboarding-device-brightness">Nivel de potencia</Label>
+                                    <span class="text-sm text-muted-foreground">
+                                        {{ deviceBrightnessLabel }}%
+                                    </span>
+                                </div>
+                                <input
+                                    id="onboarding-device-brightness"
+                                    v-model.number="deviceBrightness"
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    step="5"
+                                    name="brightness"
+                                    class="h-2 w-full cursor-pointer appearance-none rounded-full bg-secondary accent-primary disabled:cursor-not-allowed"
+                                    :disabled="!hasAreas"
+                                />
+                                <div class="flex justify-between text-xs text-muted-foreground">
+                                    <span>0%</span>
+                                    <span>50%</span>
+                                    <span>100%</span>
+                                </div>
+                                <InputError :message="errors.brightness" />
+                            </div>
+                            <input v-else type="hidden" name="brightness" :value="deviceBrightness" />
+
+                            <input type="hidden" name="status" :value="deviceStatus" />
+
+                            <Button type="submit" class="w-full" :disabled="processing || !hasAreas">
+                                Guardar dispositivo
+                            </Button>
+                        </Form>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+        <div v-else class="flex flex-1 flex-col gap-8 p-6">
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div class="space-y-4">
                     <div class="space-y-1">
