@@ -49,6 +49,7 @@ import {
     IconTrash,
     IconVolume,
     IconVolumeOff,
+    IconLock,
     IconX,
 } from '@tabler/icons-vue';
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
@@ -126,6 +127,8 @@ const areaOptions = computed<AreaOption[]>(() =>
 );
 const hasAreas = computed(() => areaOptions.value.length > 0);
 const showOnboarding = computed(() => !hasAreas.value);
+const isAreaStepLocked = computed(() => !hasLocations.value);
+const isDeviceStepLocked = computed(() => !hasAreas.value);
 
 const deviceDialogMode = ref<'create' | 'edit'>('create');
 const isDeviceDialogOpen = ref(false);
@@ -995,7 +998,16 @@ onBeforeUnmount(() => {
                     </CardContent>
                 </Card>
 
-                <Card class="border-border/70">
+                <Card class="relative overflow-hidden border-border/70">
+                    <div
+                        v-if="isAreaStepLocked"
+                        class="pointer-events-auto absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-[2px]"
+                    >
+                        <div class="flex items-center gap-2 rounded-full border border-border/80 bg-card/80 px-3 py-2 text-sm font-semibold text-muted-foreground shadow-xs">
+                            <IconLock class="size-4" />
+                            Bloqueado
+                        </div>
+                    </div>
                     <CardHeader class="space-y-2">
                         <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                             <IconBulb class="size-4" />
@@ -1059,7 +1071,16 @@ onBeforeUnmount(() => {
                     </CardContent>
                 </Card>
 
-                <Card class="border-border/70">
+                <Card class="relative overflow-hidden border-border/70">
+                    <div
+                        v-if="isDeviceStepLocked"
+                        class="pointer-events-auto absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-[2px]"
+                    >
+                        <div class="flex items-center gap-2 rounded-full border border-border/80 bg-card/80 px-3 py-2 text-sm font-semibold text-muted-foreground shadow-xs">
+                            <IconLock class="size-4" />
+                            Bloqueado
+                        </div>
+                    </div>
                     <CardHeader class="space-y-2">
                         <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
                             <IconPower class="size-4" />
